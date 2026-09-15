@@ -1,1 +1,11 @@
+# build files and exe's 
 build
+bin
+
+# devl buffers:
+*.swp
+
+# ISP / compile gen 
+compile_commands.json
+.cache
+
