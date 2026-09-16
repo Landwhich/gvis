@@ -16,7 +16,7 @@ void Renderer::Initialize(Platform* platform){
     this->createGraphicsPipeline();
     this->createCommandPool();
     this->createVertexBuffer();
-//    this->createIndexBuffer();
+    this->createIndexBuffer();
     this->createCommandBuffers();
     this->createSyncObjects();
 }
@@ -38,11 +38,11 @@ void Renderer::DrawFrame(){
         UINT64_MAX, *this->presentCompleteSemaphores[frameIndex], nullptr
     );
 
-    if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+    if (result == vk::Result::eErrorOutOfDateKHR) {
         recreateSwapChain();
         return;
     }
-    if (result != vk::Result::eSuccess) {
+    if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR) {
         assert(result == vk::Result::eTimeout || result == vk::Result::eNotReady);
         throw std::runtime_error("failed to acquire swap chain image!");
     }
