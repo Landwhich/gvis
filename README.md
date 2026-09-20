@@ -23,3 +23,7 @@ I'll keep track of a few small ideas / milestones on this project here and the r
     └── vulkan
 ```
 Just running one make file rn cause I like the simplicity, but it will def not be lasting long, prolly gonna pivot to `cmake`
+```
+# for intellisense
+bear --append -- make && make run
+```
