@@ -29,3 +29,11 @@ make build && make run
 # for intellisense
 bear --append -- make && make run
 ```
+<<<<<<< HEAD
+=======
+Just running one make file rn cause I like the simplicity, but it will def not be lasting long, prolly gonna pivot to `cmake`
+```
+# for intellisense
+bear --append -- make && make run
+```
+>>>>>>> 1edd621 (readme update)
