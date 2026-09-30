@@ -32,7 +32,6 @@ class Renderer{
     vk::raii::SwapchainKHR                  swapChain = nullptr;
     std::vector<vk::Image>                  swapChainImages;
     std::vector<vk::raii::ImageView>        swapChainImageViews;
-    vk::raii::DescriptorSetLayout           descriptorSetLayout = nullptr;
     //renderer/rendererPipeline.cpp
     // * * * * * * * *
     vk::raii::PipelineLayout                pipelineLayout = nullptr;
@@ -41,10 +40,16 @@ class Renderer{
     // * * * * * * * *
     vk::raii::CommandPool                   commandPool = nullptr;
     std::vector<vk::raii::CommandBuffer>    commandBuffers;
+    vk::raii::DescriptorSetLayout           descriptorSetLayout = nullptr;
+    vk::raii::DescriptorPool                descriptorPool = nullptr;
+    std::vector<vk::raii::DescriptorSet>    descriptorSets;
     vk::raii::Buffer                        vertexBuffer       = nullptr;
     vk::raii::DeviceMemory                  vertexBufferMemory = nullptr;
     vk::raii::Buffer                        indexBuffer        = nullptr;
     vk::raii::DeviceMemory                  indexBufferMemory  = nullptr;
+    std::vector<vk::raii::Buffer>           uniformBuffers;
+    std::vector<vk::raii::DeviceMemory>     uniformBuffersMemory;
+    std::vector<void *>                     uniformBuffersMapped;
     uint32_t                                frameIndex = 0;
     bool                                    framebufferResized = false;
     // for multi device instances, we want the option to 
@@ -155,8 +160,29 @@ private:
     void createVertexBuffer();
 
     void createIndexBuffer();
+    
+    void createUniformBuffers();
 
+    /*
+     * uses chrono to track exact time and update irrespective of frame rate
+     * TODO: investigate push constants
+     */
+    void updateUniformBuffer(uint32_t currentImage);
+
+    /*
+     * descriptor bindings are used to transmit information from the 
+     * cpp code to the shader code. this layout creation is used to feed
+     * information to the pipeline in creation for the vertex shader
+     */
     void createDescriptorSetLayout();
+
+    void createDescriptorPool();
+
+    /*
+     * descriptor sets are created after the established layout passed to
+     * the pipeline and are needed to bind UBO  
+     */
+    void createDescriptorSets();
 
     /*
      * transition target images' layouts for each set of incoming data, 

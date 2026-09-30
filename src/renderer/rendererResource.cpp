@@ -1,44 +1,133 @@
+#include <chrono>
+
 #include "renderer.hpp"
 #include "shaders.hpp"
 
 /*
  * Helpers:
  */
-// vk::DependencyInfo get_transition_image_layout(
-//     vk::Image image, vk::ImageLayout old_layout, vk::ImageLayout new_layout, vk::AccessFlags2 src_access_mask,
-//     vk::AccessFlags2 dst_access_mask, vk::PipelineStageFlags2 src_stage_mask, vk::PipelineStageFlags2 dst_stage_mask,
-//     vk::ImageAspectFlags image_aspect_flags
-// );
+
+struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
 
 const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{ 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-    {{ 0.5f,  0.5f}, {1.0f, 1.0f, 0.0f}},
-    {{-0.5f,  0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {
-        0, 1, 2, 2, 3, 0
+    0, 1, 2, 2, 3, 0
 };
 
 // descriptor sets
 void Renderer::createDescriptorSetLayout() {
-    std::array<vk::DescriptorSetLayoutBinding, 2> bindings{{{
+    std::array<vk::DescriptorSetLayoutBinding, 1> bindings{{{
         .binding = 0, 
         .descriptorType = vk::DescriptorType::eUniformBuffer, 
         .descriptorCount = 1, 
         .stageFlags = vk::ShaderStageFlagBits::eVertex
-    },{
-        .binding = 1, 
-        .descriptorType = vk::DescriptorType::eCombinedImageSampler, 
-        .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eFragment
-    }}};
+    }
+
+    //,{
+    //    .binding = 1, 
+    //    .descriptorType = vk::DescriptorType::eCombinedImageSampler, 
+    //    .descriptorCount = 1, .stageFlags = vk::ShaderStageFlagBits::eFragment
+    //}
+    }};
 
     vk::DescriptorSetLayoutCreateInfo layoutInfo{
         .bindingCount = static_cast<uint32_t>(bindings.size()), 
         .pBindings = bindings.data()
     };
     descriptorSetLayout = vk::raii::DescriptorSetLayout(device, layoutInfo);
+}
+
+void Renderer::createDescriptorPool() {
+    vk::DescriptorPoolSize poolSize{ 
+        .type = vk::DescriptorType::eUniformBuffer, 
+        .descriptorCount = gv::MAX_FRAMES_IN_FLIGHT     
+    };
+    vk::DescriptorPoolCreateInfo poolInfo{ 
+        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, 
+        .maxSets = gv::MAX_FRAMES_IN_FLIGHT, 
+        .poolSizeCount = 1, .pPoolSizes = &poolSize 
+    };
+    descriptorPool = vk::raii::DescriptorPool(this->device, poolInfo);
+}
+
+void Renderer::createDescriptorSets() {
+    std::vector<vk::DescriptorSetLayout> layouts(gv::MAX_FRAMES_IN_FLIGHT, *this->descriptorSetLayout);
+    vk::DescriptorSetAllocateInfo allocInfo {
+        .descriptorPool     = this->descriptorPool,
+        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
+        .pSetLayouts        = layouts.data()
+    };
+
+    this->descriptorSets = this->device.allocateDescriptorSets(allocInfo);
+
+    for (size_t i = 0; i < gv::MAX_FRAMES_IN_FLIGHT; i++) {
+        vk::DescriptorBufferInfo bufferInfo{ 
+            .buffer = this->uniformBuffers[i], 
+            .offset = 0, 
+            .range = sizeof(UniformBufferObject) 
+        };
+        vk::WriteDescriptorSet descriptorWrite{
+            .dstSet          = this->descriptorSets[i],
+            .dstBinding      = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType  = vk::DescriptorType::eUniformBuffer,
+            .pBufferInfo     = &bufferInfo
+        };
+        this->device.updateDescriptorSets(descriptorWrite, {}); 
+    }
+}
+
+void Renderer::createUniformBuffers() {
+    for (size_t i = 0; i < gv::MAX_FRAMES_IN_FLIGHT; i++) {
+        vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
+        // we don't use a staging buffer here due to repeated rewrites every frame
+        // no worth the overhead
+        auto [buffer, bufferMem]  = createBuffer(
+            bufferSize, 
+            vk::BufferUsageFlagBits::eUniformBuffer, 
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+        );
+
+        this->uniformBuffers.emplace_back(std::move(buffer));
+        this->uniformBuffersMemory.emplace_back(std::move(bufferMem));
+        this->uniformBuffersMapped.emplace_back( this->uniformBuffersMemory.back().mapMemory(0, bufferSize));
+    }
+}
+
+void Renderer::updateUniformBuffer(uint32_t currentImage) {
+    // static means it keeps initial start timestamp
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time       = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    UniformBufferObject ubo{};
+    ubo.model = rotate(
+        rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f))
+        ,   time * glm::radians(30.0f)
+        ,   glm::vec3(1.0f, 0.0f, 0.0f)
+    );
+    ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(
+        glm::radians(45.0f), 
+        static_cast<float>(swapChainExtent.width) / static_cast<float>(swapChainExtent.height), 
+        0.1f, 
+        10.0f
+    );
+    ubo.proj[1][1] *= -1;
+
+    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
 void Renderer::createIndexBuffer() {
@@ -111,8 +200,8 @@ void Renderer::createCommandBuffers(){
 void Renderer::recordCommandBuffer(uint32_t imageIndex){
     auto &commandBuffer = commandBuffers[frameIndex];
     // default values for depth and colour
-    vk::ClearValue clearColor = vk::ClearColorValue(0.5f, 0.0f, 0.0f, 1.0f);
-//    vk::ClearValue clearDepth = vk::ClearDepthStencilValue{1.0f, 0};
+    vk::ClearValue clearColor = vk::ClearColorValue(0.1f, 0.0f, 0.0f, 1.0f);
+    // vk::ClearValue clearDepth = vk::ClearDepthStencilValue{1.0f, 0};
     // the vk::CommandBufferBeginInfo struct will be left blank until needed
     commandBuffer.begin({});
 
@@ -168,6 +257,7 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex){
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
     commandBuffer.bindVertexBuffers(0, *vertexBuffer, {0});
     commandBuffer.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    // height * -1 to compensate for y flip
     commandBuffer.setViewport(0, vk::Viewport{
         0.0f, 0.0f, static_cast<float>(swapChainExtent.width), 
         static_cast<float>(swapChainExtent.height), 
@@ -179,7 +269,14 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex){
     // Params for the draw function:
     // vertexCount, instanceCount, firstVertex, firstInstance
     // commandBuffer.bindDescriptorSets(
-    // vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets[frameIndex], nullptr);
+    //     vk::PipelineBindPoint::eGraphics
+    //     ,   pipelineLayout
+    //     ,   0
+    //     ,   *descriptorSets[frameIndex]
+    //     ,   nullptr
+    // );
+    commandBuffers[frameIndex].bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets[frameIndex], nullptr);
     commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
     commandBuffer.endRendering();
