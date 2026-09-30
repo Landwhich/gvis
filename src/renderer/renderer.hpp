@@ -170,6 +170,8 @@ private:
     void createVertexBuffer();
 
     void createIndexBuffer();
+    
+    void createUniformBuffers();
 
     /*
      * Copies pixel data straight from buffer to vulkan image
