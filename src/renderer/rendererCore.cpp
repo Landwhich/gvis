@@ -2,13 +2,14 @@
 
 /* image views
  */
+
 void Renderer::createImageViews() {
     assert(swapChainImageViews.empty());
 
     swapChainImageViews.reserve(swapChainImages.size());
     for ( auto &image: swapChainImages ) {
-        swapChainImageViews.emplace_back(   
-            createImageView(image, swapChainSurfaceFormat.format, 
+        swapChainImageViews.emplace_back(createImageView(
+            image, swapChainSurfaceFormat.format, 
             vk::ImageAspectFlagBits::eColor, 1
         ));
     }
@@ -89,6 +90,7 @@ void Renderer::recreateSwapChain(){
     
     createSwapChain();
     createImageViews();
+    createDepthResources();
 }
 
 vk::Extent2D Renderer::chooseSwapExtent(vk::SurfaceCapabilitiesKHR const &capabilities) {
@@ -127,3 +129,4 @@ vk::PresentModeKHR Renderer::chooseSwapPresentMode(std::vector<vk::PresentModeKH
         vk::PresentModeKHR::eMailbox
         : vk::PresentModeKHR::eFifo;
 }
+

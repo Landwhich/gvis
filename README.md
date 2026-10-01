@@ -6,24 +6,26 @@ Vulkan-based engine project from scratch cause I can. Most of this is based off 
 I'll keep track of a few small ideas / milestones on this project here and the rest on my little project site: [here](https://quartz.frederich.ca/3D-Graphics-Project)
 ![alt text](image.png)
 
-### Project looks like this guy ---v
+### Project looks like this guy ⭣
 ```
 .
 ├── Makefile
-├── bin
-├── build
-├── include
-├── shaders (for build)
-└── src
-    ├── fileio
-    ├── main.cpp
-    ├── platform
-    ├── renderer
-    │   └── shaders
-    └── vulkan
+├── include [ stb + shared ]
+├── shaders [ for build ]
+├── src
+│   ├── fileio [ file r / w ]
+│   ├── main.cpp
+│   ├── platform [ using glfw ]
+│   ├── renderer
+│   │   └── shaders [ shader code + helpers ]
+│   ├── textures [ bins ]
+│   └── vulkan [ device selection ]
+└── textures [ for build ] 
 ```
 Just running one make file rn cause I like the simplicity, but it will def not be lasting long, prolly gonna pivot to `cmake`
 ```
+# this will still update shader code
+make build && make run 
 # for intellisense
 bear --append -- make && make run
 ```

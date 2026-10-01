@@ -17,6 +17,10 @@ void Renderer::Initialize(Platform* platform){
     this->createGraphicsPipeline();
     this->createCommandPool();
 
+    this->createDepthResources();
+    this->createTextureImage();
+    this->createTextureImageView();
+    this->createTextureSampler();
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
