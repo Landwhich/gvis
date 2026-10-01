@@ -1,8 +1,8 @@
 # build files and exe's 
 build
 bin
-./textures
-./shaders
+textures/*
+shaders/*
 
 # devl:
 **/.DS_Store
