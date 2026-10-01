@@ -1,7 +1,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include <stdexcept>
 #include <memory>
+#include <stdexcept>
 
 #include "platform.hpp" 
 #include "renderer.hpp"

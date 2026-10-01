@@ -26,6 +26,8 @@ VULKAN_SDK = $(HOME)/VulkanSDK/1.4.341.1/macOS
 SLANG_COMPILER = $(VULKAN_SDK)/bin/slangc
 SHADER_SRC = src/renderer/shaders/shader.slang
 SHADER_OUT = shaders/slang.spv
+TEXTURE_SRC = $(wildcard src/textures/*)
+TEXTURE_OUT = $(patsubst src/textures/%, textures/%, $(TEXTURE_SRC))
 BREW_PREFIX = /opt/homebrew
 SRC_DIR = src
 INCLUDE_DIR = include
@@ -62,7 +64,11 @@ $(SHADER_OUT): $(SHADER_SRC)
 		-entry fragMain \
 		-o $(SHADER_OUT)
 
-$(TARGET): $(OBJECTS) $(SHADER_OUT)
+textures/%: src/textures/%
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(TARGET): $(OBJECTS) $(SHADER_OUT) $(TEXTURE_OUT)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(OBJECTS) $(CFLAGS) $(LDFLAGS) -o $(TARGET)
 	@echo "build target: $@"
@@ -77,7 +83,7 @@ run: $(TARGET)
 all: $(TARGET)  
 	 
 clean:  
-	@rm -rf $(BUILD_DIR) $(BIN_DIR) $(SHADER_OUT)  
+	@rm -rf $(BUILD_DIR) $(BIN_DIR) $(SHADER_OUT) $(TEXTURE_OUT)  
 	@echo "Cleaned build and bin directories"  
 
 .PHONY: run clean all

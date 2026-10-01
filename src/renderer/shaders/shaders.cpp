@@ -8,10 +8,11 @@ vk::VertexInputBindingDescription Vertex::getBindingDescription() {
     };
 }
 
-std::array<vk::VertexInputAttributeDescription, 2> Vertex::getAttributeDescriptions() {
+std::array<vk::VertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
     return {{
-        {.location = 0, .binding = 0, .format = vk::Format::eR32G32Sfloat, .offset = offsetof(Vertex, pos)},
-        {.location = 1, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, color)}
+        {.location = 0, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, pos)}
+        ,   {.location = 1, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, color)}
+        ,   {.location = 2, .binding = 0, .format = vk::Format::eR32G32Sfloat, .offset = offsetof(Vertex, texCoord)}
     }};
 }
 

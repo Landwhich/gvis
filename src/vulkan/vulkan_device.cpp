@@ -40,10 +40,10 @@ void Renderer::createLogicalDevice() {
         , vk::PhysicalDeviceVulkan13Features
         , vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
     >featureChain = {
-    {.features = {.samplerAnisotropy = true}}               // vk::PhysicalDeviceFeatures2
-    , {.shaderDrawParameters = true}                        // vk::PhysicalDeviceVulkan11Features
-    , {.dynamicRendering = true, .synchronization2 = true}  // vk::PhysicalDeviceVulkan13Features
-    , {.extendedDynamicState = true}                        // vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
+        {.features = {.samplerAnisotropy = true}}               // vk::PhysicalDeviceFeatures2
+        ,   {.shaderDrawParameters = true}                      // vk::PhysicalDeviceVulkan11Features
+        ,   {.dynamicRendering = true, .synchronization2 = true}// vk::PhysicalDeviceVulkan13Features
+        ,   {.extendedDynamicState = true}                      // vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT
     };
 
     // create a Device

@@ -32,7 +32,6 @@ class Renderer{
     vk::raii::SwapchainKHR                  swapChain = nullptr;
     std::vector<vk::Image>                  swapChainImages;
     std::vector<vk::raii::ImageView>        swapChainImageViews;
-    vk::raii::DescriptorSetLayout           descriptorSetLayout = nullptr;
     //renderer/rendererPipeline.cpp
     // * * * * * * * *
     vk::raii::PipelineLayout                pipelineLayout = nullptr;
@@ -41,10 +40,26 @@ class Renderer{
     // * * * * * * * *
     vk::raii::CommandPool                   commandPool = nullptr;
     std::vector<vk::raii::CommandBuffer>    commandBuffers;
+    vk::raii::DescriptorSetLayout           descriptorSetLayout = nullptr;
+    vk::raii::DescriptorPool                descriptorPool = nullptr;
+    std::vector<vk::raii::DescriptorSet>    descriptorSets;
     vk::raii::Buffer                        vertexBuffer       = nullptr;
     vk::raii::DeviceMemory                  vertexBufferMemory = nullptr;
     vk::raii::Buffer                        indexBuffer        = nullptr;
     vk::raii::DeviceMemory                  indexBufferMemory  = nullptr;
+
+    vk::raii::Image                         textureImage = nullptr;
+    vk::raii::DeviceMemory                  textureImageMemory = nullptr;
+    vk::raii::ImageView                     textureImageView = nullptr;
+    vk::raii::Sampler                       textureSampler = nullptr;
+
+    vk::raii::Image                         depthImage = nullptr;
+    vk::raii::DeviceMemory                  depthImageMemory = nullptr;
+    vk::raii::ImageView                     depthImageView = nullptr;
+
+    std::vector<vk::raii::Buffer>           uniformBuffers;
+    std::vector<vk::raii::DeviceMemory>     uniformBuffersMemory;
+    std::vector<void *>                     uniformBuffersMapped;
     uint32_t                                frameIndex = 0;
     bool                                    framebufferResized = false;
     // for multi device instances, we want the option to 
@@ -156,7 +171,48 @@ private:
 
     void createIndexBuffer();
 
+    /*
+     * Copies pixel data straight from buffer to vulkan image
+     *
+     * Textures should always get stored in GPU granted they aren't getting 
+     * frequently updated (they shouldn't be), and we have the vram for them
+     * To do this images are staged in host and then sent to GPU
+     */ 
+    void createTextureImage();
+
+    void createTextureImageView();
+    
+    /*
+     * Sampler enables filters and transforms for the image before
+     * passing texels to shader
+     * Is independant of images and image views and can be used across multiple
+     */
+    void createTextureSampler();
+    
+    void createUniformBuffers();
+
+    void createDepthResources();
+
+    /*
+     * uses chrono to track exact time and update irrespective of frame rate
+     * TODO: investigate push constants
+     */
+    void updateUniformBuffer(uint32_t currentImage);
+
+    /*
+     * descriptor bindings are used to transmit information from the 
+     * cpp code to the shader code. this layout creation is used to feed
+     * information to the pipeline in creation for the vertex shader
+     */
     void createDescriptorSetLayout();
+
+    void createDescriptorPool();
+
+    /*
+     * descriptor sets are created after the established layout passed to
+     * the pipeline and are needed to bind UBO  
+     */
+    void createDescriptorSets();
 
     /*
      * transition target images' layouts for each set of incoming data, 
@@ -194,10 +250,25 @@ private:
     //renderer/pipelineResources.cpp
     // * * * * * * * * * * * * 
     void transition_image_layout(
-    vk::Image image, vk::ImageLayout old_layout, vk::ImageLayout new_layout, 
-    vk::AccessFlags2 src_access_mask, vk::AccessFlags2 dst_access_mask, 
-    vk::PipelineStageFlags2 src_stage_mask, vk::PipelineStageFlags2 dst_stage_mask,
-    vk::ImageAspectFlags image_aspect_flags);
+        vk::Image image, vk::ImageLayout old_layout, vk::ImageLayout new_layout, 
+        vk::AccessFlags2 src_access_mask, vk::AccessFlags2 dst_access_mask, 
+        vk::PipelineStageFlags2 src_stage_mask, vk::PipelineStageFlags2 dst_stage_mask,
+        vk::ImageAspectFlags image_aspect_flags
+    );
+    // queries for first supported format in a list of candidates
+    vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, 
+            vk::ImageTiling tiling, vk::FormatFeatureFlags features);
+    vk::Format findDepthFormat();
+    // shaders could be used for this but better to use images in vulkan as they 
+    // contain simpler 2D texels
+    std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(
+        uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, 
+        vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties 
+    );
+
+
+    void endSingleTimeCommands(vk::raii::CommandBuffer &&commandBuffer);
+    vk::raii::CommandBuffer beginSingleTimeCommands();
     // find the correct type of GPU memory based on reqs  
     uint32_t findMemoryType(
         uint32_t typeFilter, vk::MemoryPropertyFlags properties
@@ -213,13 +284,14 @@ private:
             vk::DeviceSize size
     );
 
-
     //renderer/rendererCore.cpp
     // * * * * * * * * * * * * 
     vk::Extent2D chooseSwapExtent(vk::SurfaceCapabilitiesKHR const &capabilities);
     uint32_t chooseSwapMinImageCount(vk::SurfaceCapabilitiesKHR const &surfaceCapabilities);
     vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
     vk::PresentModeKHR chooseSwapPresentMode(std::vector<vk::PresentModeKHR> const &availablePresentModes);
+     // Uses a lot of the same logic as createImageViews, worth having in
+     // its own function handy for textures and other images
     vk::raii::ImageView createImageView(vk::Image const &image, vk::Format format, vk::ImageAspectFlags aspectFlags, uint32_t mipLevels);
 
 };

@@ -1,8 +1,11 @@
 # build files and exe's 
 build
 bin
+textures/*
+shaders/*
 
-# devl buffers:
+# devl:
+**/.DS_Store
 *.swp
 
 # ISP / compile gen 

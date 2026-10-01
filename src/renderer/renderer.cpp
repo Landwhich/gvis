@@ -12,11 +12,20 @@ void Renderer::Initialize(Platform* platform){
     this->createLogicalDevice();
     this->createSwapChain();
     this->createImageViews();
+
     this->createDescriptorSetLayout();
     this->createGraphicsPipeline();
     this->createCommandPool();
+
+    this->createDepthResources();
+    this->createTextureImage();
+    this->createTextureImageView();
+    this->createTextureSampler();
     this->createVertexBuffer();
     this->createIndexBuffer();
+    this->createUniformBuffers();
+    this->createDescriptorPool();
+    this->createDescriptorSets();
     this->createCommandBuffers();
     this->createSyncObjects();
 }
@@ -53,6 +62,8 @@ void Renderer::DrawFrame(){
 
     commandBuffers[frameIndex].reset();
     recordCommandBuffer(imageIndex);
+
+    updateUniformBuffer(frameIndex);
 
     vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
     const vk::SubmitInfo submitInfo{

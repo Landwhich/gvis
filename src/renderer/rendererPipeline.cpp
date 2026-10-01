@@ -9,28 +9,6 @@
 #include "renderer.hpp"
 #include "shaders/shaders.hpp"
 
-// struct Vertex {
-// 
-//     glm::vec3 pos;
-//     glm::vec3 color;
-//     glm::vec2 texCoord;
-// 
-//     bool operator==(const Vertex& other) const {
-//         return pos == other.pos && color == other.color && texCoord == other.texCoord;
-//     }
-// 
-//     static vk::VertexInputBindingDescription getBindingDescription() {
-//         return { 0, sizeof(Vertex), vk::VertexInputRate::eVertex };
-//     }
-// 
-//     static std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions() {
-//         return {{
-//             {.location = 0, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, pos)},
-//             {.location = 1, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, color)},
-//             {.location = 2, .binding = 0, .format = vk::Format::eR32G32Sfloat, .offset = offsetof(Vertex, texCoord)}
-//         }};
-//     }
-// };
 
 void Renderer::createGraphicsPipeline(){
     
@@ -85,7 +63,7 @@ void Renderer::createGraphicsPipeline(){
         .depthClampEnable        = vk::False,
         .rasterizerDiscardEnable = vk::False,
         .polygonMode             = vk::PolygonMode::eFill,
-        // .cullMode                = vk::CullModeFlagBits::eBack,
+        .cullMode                = vk::CullModeFlagBits::eNone,
         .frontFace               = vk::FrontFace::eCounterClockwise,
         .depthBiasEnable         = vk::False,
         .lineWidth               = 1.0f
@@ -114,20 +92,17 @@ void Renderer::createGraphicsPipeline(){
     };
 
     vk::PipelineDepthStencilStateCreateInfo depthStencil{
-        .depthTestEnable       = vk::False,
-        .depthWriteEnable      = vk::False,
+        .depthTestEnable       = vk::True,
+        .depthWriteEnable      = vk::True,
         .depthCompareOp        = vk::CompareOp::eLess,
         .depthBoundsTestEnable = vk::False,
         .stencilTestEnable     = vk::False
     };
+    vk::Format depthFormat = findDepthFormat();
 
     pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutInfo);
      
-        // vk::Format depthFormat = findDepthFormat();
-        // vk::Format depthFormat = 1 ;
-     
-    vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {
-       {
+    vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {{
         .stageCount          = 2,
         .pStages             = shaderStages,
         .pVertexInputState   = &vertexInputInfo,
@@ -140,13 +115,11 @@ void Renderer::createGraphicsPipeline(){
         .pDynamicState       = &dynamicState,
         .layout              = pipelineLayout,
         .renderPass          = nullptr
-       },
-      {
+    }, {
         .colorAttachmentCount = 1, 
         .pColorAttachmentFormats = &swapChainSurfaceFormat.format, 
-        // .depthAttachmentFormat = depthFormat
-       }
-    }; 
+        .depthAttachmentFormat = depthFormat
+    }}; 
  
     // TODO: explore pipeline caching options
     graphicsPipeline = vk::raii::Pipeline(
