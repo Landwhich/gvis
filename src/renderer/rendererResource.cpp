@@ -24,7 +24,7 @@ struct UniformBufferObject {
 
 // descriptor sets
 void Renderer::createDescriptorSetLayout() {
-    std::array<vk::DescriptorSetLayoutBinding, 1> bindings{{{
+    std::array<vk::DescriptorSetLayoutBinding, 2> bindings{{{
         .binding = 0, 
         .descriptorType = vk::DescriptorType::eUniformBuffer, 
         .descriptorCount = 1, 

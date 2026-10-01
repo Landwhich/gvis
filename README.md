@@ -26,6 +26,7 @@ Just running one make file rn cause I like the simplicity, but it will def not b
 ```
 # this will still update shader code
 make build && make run 
+<<<<<<< HEAD
 # for intellisense
 bear --append -- make && make run
 ```
@@ -33,6 +34,8 @@ bear --append -- make && make run
 =======
 Just running one make file rn cause I like the simplicity, but it will def not be lasting long, prolly gonna pivot to `cmake`
 ```
+=======
+>>>>>>> 70bd5f2 (done with textures and depth buffers)
 # for intellisense
 bear --append -- make && make run
 ```

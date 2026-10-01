@@ -170,8 +170,28 @@ private:
     void createVertexBuffer();
 
     void createIndexBuffer();
+
+    /*
+     * Copies pixel data straight from buffer to vulkan image
+     *
+     * Textures should always get stored in GPU granted they aren't getting 
+     * frequently updated (they shouldn't be), and we have the vram for them
+     * To do this images are staged in host and then sent to GPU
+     */ 
+    void createTextureImage();
+
+    void createTextureImageView();
+    
+    /*
+     * Sampler enables filters and transforms for the image before
+     * passing texels to shader
+     * Is independant of images and image views and can be used across multiple
+     */
+    void createTextureSampler();
     
     void createUniformBuffers();
+
+    void createDepthResources();
 
     /*
      * Copies pixel data straight from buffer to vulkan image
