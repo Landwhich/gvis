@@ -9,34 +9,29 @@ I'll keep track of a few small ideas / milestones on this project here and the r
 ### Project looks like this guy ⭣
 ```
 .
-├── Makefile
-├── include [ stb + shared ]
-├── shaders [ for build ]
-├── src
-│   ├── fileio [ file r / w ]
-│   ├── main.cpp
-│   ├── platform [ using glfw ]
-│   ├── renderer
-│   │   └── shaders [ shader code + helpers ]
-│   ├── textures [ bins ]
-│   └── vulkan [ device selection ]
-└── textures [ for build ] 
+├── CMakeLists.txt 
+├── include 
+├── resources
+│   ├── models
+│   └── textures
+├── shaders
+└── src
+    ├── fileio [ file r / w ]
+    ├── platform [ using glfw ]
+    ├── renderer
+    │   └── shaders [ shader helpers ]
+    └── vulkan [ device ]
 ```
-Just running one make file rn cause I like the simplicity, but it will def not be lasting long, prolly gonna pivot to `cmake`
+
+### Building the Project
+didn't take long to move to `CMake` and holee it's so much nicer once it's set up
 ```
-# this will still update shader code
-make build && make run 
-<<<<<<< HEAD
-# for intellisense
-bear --append -- make && make run
+cmake -S . -B build
+cmake --build build --target run
 ```
-<<<<<<< HEAD
-=======
-Just running one make file rn cause I like the simplicity, but it will def not be lasting long, prolly gonna pivot to `cmake`
-```
-=======
->>>>>>> 70bd5f2 (done with textures and depth buffers)
-# for intellisense
-bear --append -- make && make run
-```
->>>>>>> 1edd621 (readme update)
+
+### Dependencies
+- MoltenVK
+- Cmake
+- stb_image
+- tinyobj
