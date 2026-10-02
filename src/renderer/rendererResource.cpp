@@ -1,10 +1,16 @@
 #include <chrono>
+#include <unordered_map>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+#pragma GCC diagnostic pop
+
 #include "renderer.hpp"
-#include "shaders.hpp"
 
 /*
  * Helpers:
@@ -21,6 +27,43 @@ struct UniformBufferObject {
     glm::mat4 view;
     glm::mat4 proj;
 };
+
+void Renderer::loadModel(){
+    tinyobj::attrib_t                attrib;
+    std::vector<tinyobj::shape_t>    shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string                      warn, err;
+
+    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, gv::MODEL_PATH.c_str()))
+        throw std::runtime_error(warn + err);
+    
+    for (const auto& shape : shapes){
+        for (const auto& index : shape.mesh.indices){
+            Vertex vertex{};
+
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = {1.0f, 1.0f, 1.0f};
+
+            auto [it, inserted] = uniqueVertices.insert({vertex, static_cast<uint32_t>(vertices.size())});
+            if (inserted)
+                vertices.push_back(vertex);
+
+            indices.push_back(it->second);
+        }
+    }
+}
 
 // descriptor sets
 void Renderer::createDescriptorSetLayout() {
@@ -129,7 +172,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
     UniformBufferObject ubo{};
     ubo.model = rotate(
         rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f))
-        ,   time * glm::radians(30.0f)
+        ,   time * glm::radians(00.0f)
         ,   glm::vec3(1.0f, 0.0f, 0.0f)
     );
     ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -189,7 +232,7 @@ void Renderer::createVertexBuffer(){
 
 void Renderer::createTextureImage(){
     int             texWidth, texHeight, texChannels;
-    stbi_uc*        pixels = stbi_load("textures/rova.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc*        pixels = stbi_load(gv::TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
     if (!pixels)
         throw std::runtime_error(std::string("could not load texture: [stbi] ") + stbi_failure_reason());
@@ -367,16 +410,16 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex){
 
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
     commandBuffer.setViewport(0, vk::Viewport{
-        0.0f,  
-        static_cast<float>(swapChainExtent.height), 
+        0.0f, 0.0,  
         static_cast<float>(swapChainExtent.width), 
+        static_cast<float>(swapChainExtent.height), 
         // height * -1 to compensate for y flip
-        -static_cast<float>(swapChainExtent.height), 
+        // -static_cast<float>(swapChainExtent.height), 
         0.0f, 1.0f
     });
     commandBuffer.setScissor(0, vk::Rect2D{vk::Offset2D{0, 0}, swapChainExtent});
     commandBuffer.bindVertexBuffers(0, *vertexBuffer, {0});
-    commandBuffer.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    commandBuffer.bindIndexBuffer(*indexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
     commandBuffers[frameIndex].bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets[frameIndex], nullptr
     );

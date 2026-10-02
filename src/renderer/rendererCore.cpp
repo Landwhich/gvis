@@ -87,7 +87,6 @@ void Renderer::recreateSwapChain(){
     // may be neat to implement pass recreation  
     // to change image format in swapChain
     cleanupSwapChain();
-    
     createSwapChain();
     createImageViews();
     createDepthResources();

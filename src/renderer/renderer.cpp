@@ -21,6 +21,8 @@ void Renderer::Initialize(Platform* platform){
     this->createTextureImage();
     this->createTextureImageView();
     this->createTextureSampler();
+
+    this->loadModel();
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
