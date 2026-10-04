@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(VulkanTest LANGUAGES CXX)
+project(gvis LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -21,36 +21,37 @@ find_program(SLANGC slangc HINTS "${VULKAN_SDK}/bin" REQUIRED)
 
 # ---- Executable -------------------------------------------------------
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp")
-add_executable(VulkanTest ${SOURCES})
+add_executable(gvis ${SOURCES})
 
-set_target_properties(VulkanTest PROPERTIES
+set_target_properties(gvis PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin"
 )
 
-# Your own include dirs (warnings enabled)
-target_include_directories(VulkanTest PRIVATE
+target_include_directories(gvis PRIVATE
+    src/fileio
+    src/models
     src/platform
     src/renderer
     src/renderer/shaders
     src/vulkan
-    src/fileio
 )
 
 # Vendored headers (stb, tinyobj) as SYSTEM => their warnings are suppressed,
 # so you can drop the #pragma GCC diagnostic block around tiny_obj_loader.h
-target_include_directories(VulkanTest SYSTEM PRIVATE
+target_include_directories(gvis SYSTEM PRIVATE
     include
     "${VULKAN_SDK}/include"
     "${BREW_PREFIX}/include"
 )
 
-target_compile_options(VulkanTest PRIVATE
+target_compile_options(gvis PRIVATE
     # -O2 -Wall -Werror -fsanitize=address
     -Wall -Werror
 )
-target_link_options(VulkanTest PRIVATE -fsanitize=address)
+# target_link_options(gvis PRIVATE -fsanitize=address)
+target_link_options(gvis PRIVATE)
 
-target_link_libraries(VulkanTest PRIVATE
+target_link_libraries(gvis PRIVATE
     Vulkan::Vulkan
     glfw
     "-framework Cocoa"
@@ -59,17 +60,16 @@ target_link_libraries(VulkanTest PRIVATE
     "-framework IOKit"
     "-framework CoreVideo"
 )
-set_target_properties(VulkanTest PROPERTIES
+set_target_properties(gvis PROPERTIES
     BUILD_RPATH "${VULKAN_SDK}/lib"
 )
 
 # ---- Shaders ----------------------------------------------------------
-set(SHADER_SRC "${CMAKE_SOURCE_DIR}/src/renderer/shaders/shader.slang")
+set(SHADER_SRC "${CMAKE_SOURCE_DIR}/shaders/shader.slang")
 set(SHADER_OUT "${CMAKE_SOURCE_DIR}/shaders/slang.spv")
 
 add_custom_command(
     OUTPUT "${SHADER_OUT}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/shaders"
     COMMAND "${SLANGC}" "${SHADER_SRC}"
     -target spirv
     -profile spirv_1_4
@@ -84,23 +84,26 @@ add_custom_command(
 )
 add_custom_target(shaders DEPENDS "${SHADER_OUT}")
 
-# ---- Textures ---------------------------------------------------------
-add_custom_target(textures
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/src/textures"
-    "${CMAKE_SOURCE_DIR}/textures"
-    COMMENT "Copying textures"
-)
 
-add_dependencies(VulkanTest shaders textures)
+# should need this
+# ---- Textures ---------------------------------------------------------
+# add_custom_target(textures
+#     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#     "${CMAKE_SOURCE_DIR}/src/textures"
+#     "${CMAKE_SOURCE_DIR}/textures"
+#     COMMENT "Copying textures"
+# )
+
+# add_dependencies(gvis shaders textures)
+add_dependencies(gvis shaders)
 
 # ---- Run --------------------------------------------------------------
 add_custom_target(run
     COMMAND ${CMAKE_COMMAND} -E env
     "VK_ICD_FILENAMES=${VULKAN_SDK}/share/vulkan/icd.d/MoltenVK_icd.json"
     "VK_LAYER_PATH=${VULKAN_SDK}/share/vulkan/explicit_layer.d"
-    $<TARGET_FILE:VulkanTest>
+    $<TARGET_FILE:gvis>
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    DEPENDS VulkanTest
+    DEPENDS gvis
     USES_TERMINAL
 )

@@ -10,22 +10,31 @@ static constexpr uint32_t WIDTH = 800;
 static constexpr uint32_t HEIGHT = 600;
 
 class GvisApplication {
-    Platform* platform = nullptr;
-    std::unique_ptr<Renderer> renderer = nullptr;
+    Platform* _platform = nullptr;
+    std::shared_ptr<ModelLoader> _modelLoader = nullptr;
+    std::shared_ptr<Renderer> _renderer = nullptr;
+    
     
 public:
-    void run(){
+    GvisApplication(){
         createPlatform();
-        renderer = std::make_unique<Renderer>();
-        renderer->Initialize(platform);
+        _renderer = std::make_shared<Renderer>();
+        _renderer->Initialize(_platform);
+        _modelLoader = std::make_shared<ModelLoader>();
+        _modelLoader->Initialize(_renderer);
+
+    }
+
+    void run(){
+
         mainLoop();
 
         cleanup();
     }
 
     void createPlatform(){
-        platform = Platform::getInstance();
-        if(platform->initWindow(WIDTH, HEIGHT, "oOOOo geeegvis") != EXIT_SUCCESS){
+        _platform = Platform::getInstance();
+        if(_platform->initWindow(WIDTH, HEIGHT, "oOOOo geeegvis") != EXIT_SUCCESS){
             throw std::runtime_error("failed to create glfw window");
         }
     }
@@ -34,16 +43,16 @@ public:
 private:
     void mainLoop(){
     
-        while (!glfwWindowShouldClose(platform->getWindow())) {
+        while (!glfwWindowShouldClose(_platform->getWindow())) {
             glfwPollEvents();
-            renderer->DrawFrame();
+            _renderer->DrawFrame();
         }
-        renderer->IdleDevice();
+        _renderer->IdleDevice();
     }
 
     void cleanup(){
-        platform->cleanupWindow();
-        renderer->Cleanup();
+        _platform->cleanupWindow();
+        _renderer->Cleanup();
     }
 };
 

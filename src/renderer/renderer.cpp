@@ -21,6 +21,7 @@ void Renderer::Initialize(Platform* platform){
     this->createTextureImage();
     this->createTextureImageView();
     this->createTextureSampler();
+
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
@@ -28,6 +29,13 @@ void Renderer::Initialize(Platform* platform){
     this->createDescriptorSets();
     this->createCommandBuffers();
     this->createSyncObjects();
+}
+
+void Renderer::RenderModel(Model* model){
+    for (const auto& v : model->vertices)
+        this->vertices.push_back(v);
+    for (const auto& i : model->indices)
+        this->indices.push_back(i);
 }
 
 void Renderer::IdleDevice(){

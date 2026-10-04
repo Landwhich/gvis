@@ -3,10 +3,15 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
-#include "vulkan_shared.h"
+#include "models.hpp"
+#include "shaders.hpp"
 #include "platform.hpp"
+#include "vulkan_shared.h"
 
 namespace gv = GVIS;
+
+struct Vertex;
+struct Model;
 
 class Renderer{
     Platform*                               platform = nullptr;
@@ -43,6 +48,9 @@ class Renderer{
     vk::raii::DescriptorSetLayout           descriptorSetLayout = nullptr;
     vk::raii::DescriptorPool                descriptorPool = nullptr;
     std::vector<vk::raii::DescriptorSet>    descriptorSets;
+
+    std::vector<Vertex>                     vertices;
+    std::vector<uint32_t>                   indices;
     vk::raii::Buffer                        vertexBuffer       = nullptr;
     vk::raii::DeviceMemory                  vertexBufferMemory = nullptr;
     vk::raii::Buffer                        indexBuffer        = nullptr;
@@ -72,6 +80,7 @@ public:
 
     void DrawFrame();
     void Initialize(Platform* platform);
+    void RenderModel(Model* model);
     void IdleDevice();
     void Cleanup();
 
@@ -163,6 +172,7 @@ private:
     void createCommandPool();
 
     void createCommandBuffers();
+
     /*
      * create a staging buffer to copy vertex data over and then copy
      * to a vertex buffer optimized for the gpu
