@@ -3,11 +3,15 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
+#include "models.hpp"
 #include "shaders.hpp"
 #include "platform.hpp"
 #include "vulkan_shared.h"
 
 namespace gv = GVIS;
+
+struct Vertex;
+struct Model;
 
 class Renderer{
     Platform*                               platform = nullptr;
@@ -76,6 +80,7 @@ public:
 
     void DrawFrame();
     void Initialize(Platform* platform);
+    void RenderModel(Model* model);
     void IdleDevice();
     void Cleanup();
 
@@ -167,8 +172,6 @@ private:
     void createCommandPool();
 
     void createCommandBuffers();
-
-    void loadModel();
 
     /*
      * create a staging buffer to copy vertex data over and then copy
