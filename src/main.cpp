@@ -3,26 +3,32 @@
 #include <memory>
 #include <stdexcept>
 
+#include "vulkan_shared.h"
 #include "platform.hpp" 
 #include "renderer.hpp"
+
+namespace gv = GVIS;
 
 static constexpr uint32_t WIDTH = 800;
 static constexpr uint32_t HEIGHT = 600;
 
 class GvisApplication {
-    Platform* _platform = nullptr;
-    std::shared_ptr<ModelLoader> _modelLoader = nullptr;
-    std::shared_ptr<Renderer> _renderer = nullptr;
-    
+    Platform* platform = nullptr;
+    std::shared_ptr<ModelLoader> modelLoader = nullptr;
+    std::shared_ptr<Renderer> renderer = nullptr;
     
 public:
     GvisApplication(){
         createPlatform();
-        _renderer = std::make_shared<Renderer>();
-        _renderer->Initialize(_platform);
-        _modelLoader = std::make_shared<ModelLoader>();
-        _modelLoader->Initialize(_renderer);
+        renderer = std::make_shared<Renderer>(platform);
+        renderer->Initialize();
 
+        modelLoader = std::make_shared<ModelLoader>();
+        modelLoader->Initialize(renderer);
+        Model model = modelLoader->LoadModel(gv::MODEL_PATH, gv::TEXTURE_PATH);
+
+        renderer->RenderModel(&model);
+        renderer->Build();
     }
 
     void run(){
@@ -33,8 +39,8 @@ public:
     }
 
     void createPlatform(){
-        _platform = Platform::getInstance();
-        if(_platform->initWindow(WIDTH, HEIGHT, "oOOOo geeegvis") != EXIT_SUCCESS){
+        platform = Platform::getInstance();
+        if(platform->initWindow(WIDTH, HEIGHT, "oOOOo geeegvis") != EXIT_SUCCESS){
             throw std::runtime_error("failed to create glfw window");
         }
     }
@@ -43,16 +49,16 @@ public:
 private:
     void mainLoop(){
     
-        while (!glfwWindowShouldClose(_platform->getWindow())) {
+        while (!glfwWindowShouldClose(platform->getWindow())) {
             glfwPollEvents();
-            _renderer->DrawFrame();
+            renderer->DrawFrame();
         }
-        _renderer->IdleDevice();
+        renderer->IdleDevice();
     }
 
     void cleanup(){
-        _platform->cleanupWindow();
-        _renderer->Cleanup();
+        platform->cleanupWindow();
+        renderer->Cleanup();
     }
 };
 

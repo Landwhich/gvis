@@ -1,9 +1,11 @@
 #include "renderer.hpp"
 
-void Renderer::Initialize(Platform* platform){
-    this->platform = platform;
+Renderer::Renderer(Platform* platform) : platform(platform){
     // Renderer registers a lambda, no GLFW/user-pointer knowledge needed
     platform->setResizeCallback([this](int w, int h) { framebufferResizeCallback(w, h); });
+}
+
+void Renderer::Initialize(){
     this->createVulkanInstance();
     this->setupDebugMessenger();
     if(!this->createSurface())
@@ -12,7 +14,9 @@ void Renderer::Initialize(Platform* platform){
     this->createLogicalDevice();
     this->createSwapChain();
     this->createImageViews();
+}
 
+void Renderer::Build(){
     this->createDescriptorSetLayout();
     this->createGraphicsPipeline();
     this->createCommandPool();

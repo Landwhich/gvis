@@ -78,8 +78,10 @@ class Renderer{
     vk::raii::DebugUtilsMessengerEXT        debugMessenger = nullptr;
 public:
 
+    Renderer(Platform* platform);
+    void Initialize();
+    void Build();
     void DrawFrame();
-    void Initialize(Platform* platform);
     void RenderModel(Model* model);
     void IdleDevice();
     void Cleanup();
