@@ -1,22 +1,47 @@
+#include <iostream>
+
 #include "renderer.hpp"
 
-void Renderer::Initialize(Platform* platform){
-    this->platform = platform;
+Renderer::Renderer(Platform* platform):platform(platform){
+
+}
+
+void Renderer::Initialize(){
+    std::cout << "Initializing Renderer:\n";
     // Renderer registers a lambda, no GLFW/user-pointer knowledge needed
+    //
     platform->setResizeCallback([this](int w, int h) { framebufferResizeCallback(w, h); });
+
+    std::cout << " - Creating Instance...\n";
     this->createVulkanInstance();
     this->setupDebugMessenger();
     if(!this->createSurface())
         throw std::runtime_error("failed to create vulkan surface"); 
-    this->pickPhysicalDevice();
-    this->createLogicalDevice();
+
+    // create Device  
+    std::cout << " - Creating Device...\n";
+    vulkanDevice = std::make_unique<VulkanDevice>(this->instance, this->surface, DeviceParams{
+            .requiredExts = gv::REQUIRED_DEVICE_EXT,
+            .optionalExts = {},
+    }); 
+    assert(vulkanDevice);
+    assert(vulkanDevice->getDevice() != 0);
+    assert(vulkanDevice->getPhysicalDevice() != 0);
+
+    std::cout << " - Creating Swap Chain...\n";
     this->createSwapChain();
     this->createImageViews();
 
     this->createDescriptorSetLayout();
+
+    std::cout << " - Creating Pipeline...\n";
     this->createGraphicsPipeline();
     this->createCommandPool();
+}
 
+
+void Renderer::Build(){
+    std::cout << " - Creating Resources...\n";
     this->createDepthResources();
     this->createTextureImage();
     this->createTextureImageView();
@@ -31,6 +56,7 @@ void Renderer::Initialize(Platform* platform){
     this->createSyncObjects();
 }
 
+
 void Renderer::RenderModel(Model* model){
     for (const auto& v : model->vertices)
         this->vertices.push_back(v);
@@ -39,7 +65,7 @@ void Renderer::RenderModel(Model* model){
 }
 
 void Renderer::IdleDevice(){
-    device.waitIdle();
+    vulkanDevice->idle();
 }
 
 void Renderer::Cleanup(){
@@ -47,7 +73,7 @@ void Renderer::Cleanup(){
 }
 
 void Renderer::DrawFrame(){
-    auto fenceResult = device.waitForFences(*this->inFlightFences[frameIndex], vk::True, UINT64_MAX);
+    auto fenceResult = vulkanDevice->getDevice().waitForFences(*this->inFlightFences[frameIndex], vk::True, UINT64_MAX);
     if (fenceResult != vk::Result::eSuccess)
         throw std::runtime_error("failed to wait for fence!");
 
@@ -66,7 +92,7 @@ void Renderer::DrawFrame(){
 
     // avoid stalls from early returns above ^
     // Only reset the fence if we are submitting work
-    device.resetFences(*this->inFlightFences[frameIndex]);
+    vulkanDevice->getDevice().resetFences(*this->inFlightFences[frameIndex]);
 
     commandBuffers[frameIndex].reset();
     recordCommandBuffer(imageIndex);
@@ -83,7 +109,7 @@ void Renderer::DrawFrame(){
         .signalSemaphoreCount = 1,
         .pSignalSemaphores    = &*renderFinishedSemaphores[imageIndex]
     };
-    queue.submit(submitInfo, *inFlightFences[frameIndex]);
+    vulkanDevice->getQueue().submit(submitInfo, *inFlightFences[frameIndex]);
 
     const vk::PresentInfoKHR presentInfo{
         .waitSemaphoreCount = 1,
@@ -93,7 +119,7 @@ void Renderer::DrawFrame(){
         .pImageIndices      = &imageIndex
     };
 
-    auto presentResult = queue.presentKHR(presentInfo);
+    auto presentResult = vulkanDevice->getQueue().presentKHR(presentInfo);
 
     if ((presentResult == vk::Result::eSuboptimalKHR) 
         || (presentResult == vk::Result::eErrorOutOfDateKHR) 
