@@ -6,25 +6,32 @@
 #include <glm/gtx/hash.hpp>
 
 #include "file.hpp"
-#include "renderer.hpp"
+#include "models.hpp"
+#include "pipeline.hpp"
 #include "shaders/shaders.hpp"
 
+namespace gv = GVIS;
 
-void Renderer::createGraphicsPipeline(){
+Pipeline::Pipeline(vk::raii::Device& device) : device(device){
+    if (device == nullptr) throw std::runtime_error("pipeline device invalid");    
+};
+
+void Pipeline::Create(){
     
-    vk::raii::ShaderModule shaderModule = createShaderModule(readFile("shaders/slang.spv"), device);
+    ShaderModule shaderModule("shaders", device);
  
     // info given to pipeline to describe the shaders used 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo{ 
         .stage = vk::ShaderStageFlagBits::eVertex, 
-        .module = shaderModule,  
+        .module = shaderModule.getModule(),  
         .pName = "vertMain" 
     };
     vk::PipelineShaderStageCreateInfo fragShaderStageInfo{ 
         .stage = vk::ShaderStageFlagBits::eFragment, 
-        .module = shaderModule, 
+        .module = shaderModule.getModule(), 
         .pName = "fragMain" 
     };
+
     vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
  
     // bindings and attributes useful for custom vector use, like with instancing

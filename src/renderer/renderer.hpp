@@ -5,6 +5,7 @@
 
 #include "models.hpp"
 #include "shaders.hpp"
+#include "pipeline.hpp"
 #include "platform.hpp"
 #include "vulkan_shared.h"
 
@@ -40,14 +41,11 @@ class Renderer{
     //renderer/rendererPipeline.cpp
     // * * * * * * * *
     vk::raii::PipelineLayout                pipelineLayout = nullptr;
-    vk::raii::Pipeline                      graphicsPipeline = nullptr; 
+    Pipeline*                               graphicsPipeline = nullptr;
     //renderer/rendererResource.cpp
     // * * * * * * * *
     vk::raii::CommandPool                   commandPool = nullptr;
     std::vector<vk::raii::CommandBuffer>    commandBuffers;
-    vk::raii::DescriptorSetLayout           descriptorSetLayout = nullptr;
-    vk::raii::DescriptorPool                descriptorPool = nullptr;
-    std::vector<vk::raii::DescriptorSet>    descriptorSets;
 
     std::vector<Vertex>                     vertices;
     std::vector<uint32_t>                   indices;
@@ -210,21 +208,6 @@ private:
      * TODO: investigate push constants
      */
     void updateUniformBuffer(uint32_t currentImage);
-
-    /*
-     * descriptor bindings are used to transmit information from the 
-     * cpp code to the shader code. this layout creation is used to feed
-     * information to the pipeline in creation for the vertex shader
-     */
-    void createDescriptorSetLayout();
-
-    void createDescriptorPool();
-
-    /*
-     * descriptor sets are created after the established layout passed to
-     * the pipeline and are needed to bind UBO  
-     */
-    void createDescriptorSets();
 
     /*
      * transition target images' layouts for each set of incoming data, 

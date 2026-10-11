@@ -15,8 +15,6 @@
 #include <memory>
 #include <vector>
 
-#include "renderer.hpp"
-
 namespace fs = std::filesystem;
 
 // forward decls
