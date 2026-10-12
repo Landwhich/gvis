@@ -3,9 +3,10 @@
 #include <memory>
 #include <stdexcept>
 
-#include "vulkan_shared.h"
+#include "models.hpp" 
 #include "platform.hpp" 
 #include "renderer.hpp"
+#include "vulkan_shared.h"
 
 namespace gv = GVIS;
 

@@ -4,6 +4,7 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
+<<<<<<< HEAD
 class ShaderModule{
     vk::raii::Device&                       device;
     vk::raii::ShaderModule                  shaderModule = nullptr;
@@ -33,5 +34,9 @@ class ShaderModule{
 };
 
 [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code, vk::raii::Device& device);
+=======
+[[nodiscard]] vk::raii::ShaderModule createShaderModule(
+        const std::vector<char>& code, const vk::raii::Device& device);
+>>>>>>> origin/better-resources
 
 

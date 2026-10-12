@@ -18,7 +18,7 @@ Pipeline::Pipeline(vk::raii::Device& device) : device(device){
 
 void Pipeline::Create(){
     
-    ShaderModule shaderModule("shaders", device);
+    vk::raii::ShaderModule shaderModule = createShaderModule(readFile("shaders/slang.spv"), vulkanDevice->getDevice());
  
     // info given to pipeline to describe the shaders used 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo{ 
@@ -107,7 +107,7 @@ void Pipeline::Create(){
     };
     vk::Format depthFormat = findDepthFormat();
 
-    pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutInfo);
+    pipelineLayout = vk::raii::PipelineLayout(vulkanDevice->getDevice(), pipelineLayoutInfo);
      
     vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain = {{
         .stageCount          = 2,
@@ -130,7 +130,7 @@ void Pipeline::Create(){
  
     // TODO: explore pipeline caching options
     graphicsPipeline = vk::raii::Pipeline(
-        device, 
+        vulkanDevice->getDevice(), 
         nullptr, 
         pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
     );

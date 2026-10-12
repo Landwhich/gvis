@@ -1,6 +1,7 @@
 #include "file.hpp"
 #include "shaders.hpp"
 
+<<<<<<< HEAD
 namespace gv = GVIS;
 
 ShaderModule::ShaderModule(const std::string& filename, vk::raii::Device& device){
@@ -9,6 +10,10 @@ ShaderModule::ShaderModule(const std::string& filename, vk::raii::Device& device
 
 [[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code, vk::raii::Device& device) {
     vk::ShaderModuleCreateInfo createInfo {  
+=======
+[[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code, const vk::raii::Device& device) {
+    vk::ShaderModuleCreateInfo createInfo{ 
+>>>>>>> origin/better-resources
         .codeSize = code.size() * sizeof(char), 
         .pCode = reinterpret_cast<const uint32_t*>(code.data()) 
     };

@@ -4,7 +4,6 @@
 class Pipeline{
     vk::raii::Device&                       device;                       
 
-
     vk::raii::Pipeline                      graphicsPipeline = nullptr; 
 
   public:

@@ -3,6 +3,9 @@
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
 
+#include <memory>
+
+#include "device.hpp"
 #include "models.hpp"
 #include "shaders.hpp"
 #include "pipeline.hpp"
@@ -11,23 +14,20 @@
 
 namespace gv = GVIS;
 
-struct Vertex;
+class VulkanDevice;
 struct Model;
+struct Vertex;
 
 class Renderer{
     Platform*                               platform = nullptr;
-
     //vulkan/vulkanDevice.cpp
     // * * * * * * * *
     vk::raii::Context                       context; 
     vk::raii::Instance                      instance = nullptr; 
     vk::raii::SurfaceKHR                    surface = nullptr; 
-    vk::raii::PhysicalDevice                physicalDevice = nullptr;
-    vk::raii::Device                        device = nullptr;
-    vk::raii::Queue                         queue = nullptr;
-    //TODO: duplicate queue arch to provide optimized queueing for both
-    //graphics and transfer ops
-    uint32_t                                queueIndex = ~0;
+
+    std::unique_ptr<VulkanDevice>           vulkanDevice = nullptr;
+
     std::vector<vk::raii::Semaphore>        presentCompleteSemaphores; 
     std::vector<vk::raii::Semaphore>        renderFinishedSemaphores; 
     std::vector<vk::raii::Fence>            inFlightFences; 
@@ -101,35 +101,17 @@ private:
     void setupDebugMessenger();
 
     /*
-     * Finds a device which supports:
-     * - required queue families
-     * - the needed device EXTs
-     * - needed features
-     * should expand this to optimize device on higher-end PCs
-     */
-    void pickPhysicalDevice();
-
-    /*
      * Query window surface from platform object,
      * and create vulkan surface object from that
      */
     bool createSurface();
-
-    /*
-     * Create real vulkan device a logical interface to the physical device:
-     * - check for swapchain support
-     * - find supporting queue given what we need (ofs render doesn't need present func)
-     * - query for features and support needed within the device
-     * - query for extensions
-     * - finally create device and queue 
-     */
-    void createLogicalDevice();
 
     // * * * * * * * * * * * * 
     //
     //renderer/rendererCore.cpp
     //
     // * * * * * * * * * * * * 
+    
     /*
      * vulkan has no 'framebuffer' as it owns the buffer(s) directly  
      * we need to query for explicit surface support as well on top of generic support
@@ -240,7 +222,6 @@ private:
     //vulkan/vulkandevice.cpp
     // * * * * * * * * * * * * 
     void getRequiredInstanceExtensions();
-    bool isDeviceSuitable(vk::raii::PhysicalDevice const& physicalDevice);
 
     //renderer/pipelineResources.cpp
     // * * * * * * * * * * * * 
@@ -251,8 +232,6 @@ private:
         vk::ImageAspectFlags image_aspect_flags
     );
     // queries for first supported format in a list of candidates
-    vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, 
-            vk::ImageTiling tiling, vk::FormatFeatureFlags features);
     vk::Format findDepthFormat();
     // shaders could be used for this but better to use images in vulkan as they 
     // contain simpler 2D texels
@@ -265,9 +244,6 @@ private:
     void endSingleTimeCommands(vk::raii::CommandBuffer &&commandBuffer);
     vk::raii::CommandBuffer beginSingleTimeCommands();
     // find the correct type of GPU memory based on reqs  
-    uint32_t findMemoryType(
-        uint32_t typeFilter, vk::MemoryPropertyFlags properties
-    );
     std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer(
         vk::DeviceSize size, 
         vk::BufferUsageFlags usage, 

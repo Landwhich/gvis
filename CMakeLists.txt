@@ -32,6 +32,7 @@ target_include_directories(gvis PRIVATE
     src/models
     src/platform
     src/renderer
+    src/renderer/device
     src/renderer/shaders
     src/vulkan
 )
