@@ -7,12 +7,8 @@
 
 #include "device.hpp"
 #include "models.hpp"
-#include "shaders.hpp"
 #include "pipeline.hpp"
 #include "platform.hpp"
-#include "vulkan_shared.h"
-
-namespace gv = GVIS;
 
 class VulkanDevice;
 struct Model;
@@ -27,6 +23,7 @@ class Renderer{
     vk::raii::SurfaceKHR                    surface = nullptr; 
 
     std::unique_ptr<VulkanDevice>           vulkanDevice = nullptr;
+    std::shared_ptr<Pipeline>               graphicsPipeline = nullptr;
 
     std::vector<vk::raii::Semaphore>        presentCompleteSemaphores; 
     std::vector<vk::raii::Semaphore>        renderFinishedSemaphores; 
@@ -38,10 +35,6 @@ class Renderer{
     vk::raii::SwapchainKHR                  swapChain = nullptr;
     std::vector<vk::Image>                  swapChainImages;
     std::vector<vk::raii::ImageView>        swapChainImageViews;
-    //renderer/rendererPipeline.cpp
-    // * * * * * * * *
-    vk::raii::PipelineLayout                pipelineLayout = nullptr;
-    Pipeline*                               graphicsPipeline = nullptr;
     //renderer/rendererResource.cpp
     // * * * * * * * *
     vk::raii::CommandPool                   commandPool = nullptr;
@@ -56,12 +49,12 @@ class Renderer{
 
     vk::raii::Image                         textureImage = nullptr;
     vk::raii::DeviceMemory                  textureImageMemory = nullptr;
-    vk::raii::ImageView                     textureImageView = nullptr;
-    vk::raii::Sampler                       textureSampler = nullptr;
 
     vk::raii::Image                         depthImage = nullptr;
     vk::raii::DeviceMemory                  depthImageMemory = nullptr;
     vk::raii::ImageView                     depthImageView = nullptr;
+    vk::raii::ImageView                     textureImageView = nullptr;   
+    vk::raii::Sampler                       textureSampler = nullptr;
 
     std::vector<vk::raii::Buffer>           uniformBuffers;
     std::vector<vk::raii::DeviceMemory>     uniformBuffersMemory;
@@ -79,8 +72,7 @@ public:
     Renderer(Platform* platform);
     void Initialize();
     void Build();
-    void DrawFrame();
-    void RenderModel(Model* model);
+    void DrawFrame(); void RenderModel(Model* model);
     void IdleDevice();
     void Cleanup();
 
@@ -164,8 +156,6 @@ private:
     void createIndexBuffer();
 
     /*
-     * Copies pixel data straight from buffer to vulkan image
-     *
      * Textures should always get stored in GPU granted they aren't getting 
      * frequently updated (they shouldn't be), and we have the vram for them
      * To do this images are staged in host and then sent to GPU
@@ -216,7 +206,6 @@ private:
      * Dynamic Rendering (1.3) means we don't need to create explicit render passes
      * and can instead set everything from the pipeline
      */
-    void createGraphicsPipeline();
        
     void framebufferResizeCallback(int width, int height); 
     //vulkan/vulkandevice.cpp

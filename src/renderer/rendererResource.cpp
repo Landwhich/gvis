@@ -4,6 +4,10 @@
 #include <stb_image.h>
 
 #include "renderer.hpp"
+#include "shaders.hpp"
+#include "vulkan_shared.h"
+
+namespace gv = GVIS;
 
 /*
  * Helpers:
@@ -14,92 +18,6 @@ void transitionImageLayout( vk::raii::CommandBuffer &commandBuffer, const vk::ra
 
 void copyBufferToImage( vk::raii::CommandBuffer &commandBuffer, const vk::raii::Buffer &buffer, 
                         vk::raii::Image &image, uint32_t width, uint32_t height); 
-
-struct UniformBufferObject {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
-};
-
-// descriptor sets
-void Renderer::createDescriptorSetLayout() {
-    std::array<vk::DescriptorSetLayoutBinding, 2> bindings{{{
-        .binding = 0, 
-        .descriptorType = vk::DescriptorType::eUniformBuffer, 
-        .descriptorCount = 1, 
-        .stageFlags = vk::ShaderStageFlagBits::eVertex
-    } ,{
-        .binding = 1, 
-        .descriptorType = vk::DescriptorType::eCombinedImageSampler, 
-        .descriptorCount = 1, 
-        // stage flag for tex could also be in vert shader (heightmaps)
-        .stageFlags = vk::ShaderStageFlagBits::eFragment
-    }}};
-
-    vk::DescriptorSetLayoutCreateInfo layoutInfo{
-        .bindingCount = static_cast<uint32_t>(bindings.size()), 
-        .pBindings = bindings.data()
-    };
-    descriptorSetLayout = vk::raii::DescriptorSetLayout(vulkanDevice->getDevice(), layoutInfo);
-}
-
-void Renderer::createDescriptorPool() {
-    std::array<vk::DescriptorPoolSize, 2> poolSize{{{
-        .type = vk::DescriptorType::eUniformBuffer, 
-        .descriptorCount = gv::MAX_FRAMES_IN_FLIGHT
-    }, {
-        .type = vk::DescriptorType::eCombinedImageSampler, 
-        .descriptorCount = gv::MAX_FRAMES_IN_FLIGHT
-    }}};
-    vk::DescriptorPoolCreateInfo poolInfo{
-        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        .maxSets       = gv::MAX_FRAMES_IN_FLIGHT,
-        .poolSizeCount = static_cast<uint32_t>(poolSize.size()),
-        .pPoolSizes    = poolSize.data()
-    };
-    descriptorPool = vk::raii::DescriptorPool(vulkanDevice->getDevice(), poolInfo);
-}
-
-void Renderer::createDescriptorSets() {
-    std::vector<vk::DescriptorSetLayout> layouts(gv::MAX_FRAMES_IN_FLIGHT, *this->descriptorSetLayout);
-    vk::DescriptorSetAllocateInfo allocInfo {
-        .descriptorPool     = this->descriptorPool,
-        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
-        .pSetLayouts        = layouts.data()
-    };
-
-    this->descriptorSets = vulkanDevice->getDevice().allocateDescriptorSets(allocInfo);
-
-    for (size_t i = 0; i < gv::MAX_FRAMES_IN_FLIGHT; i++) {
-        vk::DescriptorBufferInfo bufferInfo{ 
-            .buffer = this->uniformBuffers[i], 
-            .offset = 0, 
-            .range = sizeof(UniformBufferObject) 
-        };
-        vk::DescriptorImageInfo imageInfo{
-            .sampler = this->textureSampler, 
-            .imageView = this->textureImageView, 
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-        };
-        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{{
-        {
-            .dstSet          = this->descriptorSets[i],
-            .dstBinding      = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = vk::DescriptorType::eUniformBuffer,
-            .pBufferInfo     = &bufferInfo
-        }, {
-            .dstSet          = this->descriptorSets[i],
-            .dstBinding      = 1,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
-            .pImageInfo      = &imageInfo
-        }}};
-        vulkanDevice->getDevice().updateDescriptorSets(descriptorWrites, {}); 
-    }
-}
 
 void Renderer::createUniformBuffers() {
     for (size_t i = 0; i < gv::MAX_FRAMES_IN_FLIGHT; i++) {
@@ -364,7 +282,7 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex){
     };
     commandBuffer.beginRendering(renderingInfo);
 
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline->getPipeline());
     commandBuffer.setViewport(0, vk::Viewport{
         0.0f, 0.0,  
         static_cast<float>(swapChainExtent.width), 
@@ -377,8 +295,8 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex){
     commandBuffer.bindVertexBuffers(0, *vertexBuffer, {0});
     commandBuffer.bindIndexBuffer(*indexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
     commandBuffers[frameIndex].bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets[frameIndex], nullptr
-    );
+            vk::PipelineBindPoint::eGraphics, graphicsPipeline->getLayout(), 0, 
+            *graphicsPipeline->getDescriptorSets()[frameIndex], nullptr );
     commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     commandBuffer.endRendering();
 

@@ -2,7 +2,7 @@
 build
 bin
 textures/*
-shaders/*
+shaders/*.spv
 
 # devl:
 **/.DS_Store

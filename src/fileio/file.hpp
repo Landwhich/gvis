@@ -21,12 +21,12 @@ namespace GVIS{
         return buffer;
     }
 
-    static std::vector<char> readShaderFile(const std::string& filename) {
-        std::string shaderFilename{"shader/" + filename + ".spv"};  
+    [[maybe_unused]] static std::vector<char> readShaderFile(const std::string& filename) {
+        std::string shaderFilename{"shaders/" + filename + ".spv"};  
         std::ifstream file(shaderFilename, std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
-            throw std::runtime_error("failed to open file!");
+            throw std::runtime_error("failed to open file: " + shaderFilename);
         }
 
         std::vector<char> buffer(file.tellg());
