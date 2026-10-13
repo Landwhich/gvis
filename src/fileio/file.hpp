@@ -2,19 +2,41 @@
 
 #include <fstream>
 
-static std::vector<char> readFile(const std::string& filename) {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+namespace GVIS{
 
-    if (!file.is_open()) {
-    throw std::runtime_error("failed to open file!");
+    [[maybe_unused]] static std::vector<char> readFile(const std::string& filename) {
+        std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+        if (!file.is_open()) {
+            throw std::runtime_error("failed to open file!");
+        }
+
+        std::vector<char> buffer(file.tellg());
+
+        file.seekg(0, std::ios::beg);
+        file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+
+        file.close();
+
+        return buffer;
     }
 
-    std::vector<char> buffer(file.tellg());
+    [[maybe_unused]] static std::vector<char> readShaderFile(const std::string& filename) {
+        std::string shaderFilename{"shaders/" + filename + ".spv"};  
+        std::ifstream file(shaderFilename, std::ios::ate | std::ios::binary);
 
-    file.seekg(0, std::ios::beg);
-    file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+        if (!file.is_open()) {
+            throw std::runtime_error("failed to open file: " + shaderFilename);
+        }
 
-    file.close();
+        std::vector<char> buffer(file.tellg());
 
-    return buffer;
+        file.seekg(0, std::ios::beg);
+        file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+
+        file.close();
+
+        return buffer;
+    }
+
 }

@@ -1,17 +1,18 @@
 #include <iostream>
 
 #include "renderer.hpp"
+#include "vulkan_shared.h"
 
-Renderer::Renderer(Platform* platform):platform(platform){
+namespace gv = GVIS;
+
+Renderer::Renderer(Platform* platform) : platform(platform){
 
 }
 
 void Renderer::Initialize(){
     std::cout << "Initializing Renderer:\n";
     // Renderer registers a lambda, no GLFW/user-pointer knowledge needed
-    //
     platform->setResizeCallback([this](int w, int h) { framebufferResizeCallback(w, h); });
-
     std::cout << " - Creating Instance...\n";
     this->createVulkanInstance();
     this->setupDebugMessenger();
@@ -24,21 +25,17 @@ void Renderer::Initialize(){
             .requiredExts = gv::REQUIRED_DEVICE_EXT,
             .optionalExts = {},
     }); 
-    assert(vulkanDevice);
-    assert(vulkanDevice->getDevice() != 0);
-    assert(vulkanDevice->getPhysicalDevice() != 0);
 
     std::cout << " - Creating Swap Chain...\n";
     this->createSwapChain();
     this->createImageViews();
 
-    this->createDescriptorSetLayout();
-
     std::cout << " - Creating Pipeline...\n";
-    this->createGraphicsPipeline();
+    graphicsPipeline = std::make_shared<Pipeline>(vulkanDevice->getDevice());
+    graphicsPipeline->DescriptorSetup();
+    graphicsPipeline->Create(this->swapChainSurfaceFormat, findDepthFormat());
     this->createCommandPool();
 }
-
 
 void Renderer::Build(){
     std::cout << " - Creating Resources...\n";
@@ -50,8 +47,8 @@ void Renderer::Build(){
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
-    this->createDescriptorPool();
-    this->createDescriptorSets();
+    std::cout << " - Creating Pipeline Descriptors...\n";
+    graphicsPipeline->GenDescriptorSet(uniformBuffers, textureImageView, textureSampler);
     this->createCommandBuffers();
     this->createSyncObjects();
 }

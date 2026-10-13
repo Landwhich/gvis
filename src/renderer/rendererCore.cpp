@@ -1,6 +1,9 @@
 #include <iostream>
 
 #include "renderer.hpp"
+#include "vulkan_shared.h"
+
+namespace gv = GVIS;
 
 /* image views
  */
