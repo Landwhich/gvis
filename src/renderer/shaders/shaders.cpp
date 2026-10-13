@@ -1,24 +1,17 @@
+#include "file.hpp"
 #include "shaders.hpp"
 
-vk::VertexInputBindingDescription Vertex::getBindingDescription() {
-    return {
-        .binding = 0
-        , .stride = sizeof(Vertex)
-        , .inputRate = vk::VertexInputRate::eVertex
-    };
+namespace gv = GVIS;
+
+ShaderModule::ShaderModule(const std::string& filename, 
+    const vk::raii::Device& device) 
+    //: device(device) 
+{
+    shaderModule = createShaderModule(gv::readShaderFile(filename), device);
 }
 
-std::array<vk::VertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
-    return {{
-        {.location = 0, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, pos)}
-        ,   {.location = 1, .binding = 0, .format = vk::Format::eR32G32B32Sfloat, .offset = offsetof(Vertex, color)}
-        ,   {.location = 2, .binding = 0, .format = vk::Format::eR32G32Sfloat, .offset = offsetof(Vertex, texCoord)}
-    }};
-}
-
-
-[[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code, vk::raii::Device& device) {
-    vk::ShaderModuleCreateInfo createInfo{ 
+[[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code, const vk::raii::Device& device) {
+    vk::ShaderModuleCreateInfo createInfo {  
         .codeSize = code.size() * sizeof(char), 
         .pCode = reinterpret_cast<const uint32_t*>(code.data()) 
     };

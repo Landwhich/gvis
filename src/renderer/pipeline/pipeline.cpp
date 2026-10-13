@@ -5,26 +5,45 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#include "file.hpp"
-#include "renderer.hpp"
+#include "models.hpp"
+#include "pipeline.hpp"
 #include "shaders/shaders.hpp"
+#include "vulkan_shared.h"
 
+namespace gv = GVIS;
 
-void Renderer::createGraphicsPipeline(){
+Pipeline::Pipeline(const vk::raii::Device& device) : device(device){
+    if (device == nullptr) throw std::runtime_error("device is invalid");
+    descriptorManager = std::make_unique<DescriptorManager>(device);
+};
+
+void Pipeline::DescriptorSetup() {
+    descriptorManager->createDescriptorSetLayout(); 
+}
+
+void Pipeline::GenDescriptorSet(const std::vector<vk::raii::Buffer>& uniformBuffers,
+    const vk::raii::ImageView& textureImageView, const vk::raii::Sampler& textureSampler
+) const {
+    descriptorManager->createDescriptorPool(); 
+    descriptorManager->createDescriptorSets(uniformBuffers, textureImageView, textureSampler);
+}
+
+void Pipeline::Create(vk::SurfaceFormatKHR swapChainSurfaceFormat, vk::Format depthFormat){
     
-    vk::raii::ShaderModule shaderModule = createShaderModule(readFile("shaders/slang.spv"), device);
- 
+    ShaderModule shaderModule("slang", device);
+
     // info given to pipeline to describe the shaders used 
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo{ 
         .stage = vk::ShaderStageFlagBits::eVertex, 
-        .module = shaderModule,  
+        .module = shaderModule.shaderModule,  
         .pName = "vertMain" 
     };
     vk::PipelineShaderStageCreateInfo fragShaderStageInfo{ 
         .stage = vk::ShaderStageFlagBits::eFragment, 
-        .module = shaderModule, 
+        .module = shaderModule.shaderModule, 
         .pName = "fragMain" 
     };
+
     vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
  
     // bindings and attributes useful for custom vector use, like with instancing
@@ -83,11 +102,13 @@ void Renderer::createGraphicsPipeline(){
         .attachmentCount = 1, 
         .pAttachments = &colorBlendAttachment
     };
+
+    vk::DescriptorSetLayout setLayout = *descriptorManager->getLayout();
      
     // used for shader uniforms. required even if not
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{
         .setLayoutCount = 1, 
-        .pSetLayouts = &*descriptorSetLayout,  
+        .pSetLayouts = &setLayout,  
         .pushConstantRangeCount = 0
     };
 
@@ -98,7 +119,7 @@ void Renderer::createGraphicsPipeline(){
         .depthBoundsTestEnable = vk::False,
         .stencilTestEnable     = vk::False
     };
-    vk::Format depthFormat = findDepthFormat();
+    // vk::Format depthFormat = findDepthFormat();
 
     pipelineLayout = vk::raii::PipelineLayout(device, pipelineLayoutInfo);
      
@@ -128,16 +149,4 @@ void Renderer::createGraphicsPipeline(){
         pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>()
     );
 }
-
-[[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code, vk::raii::Device device)  {
-    vk::ShaderModuleCreateInfo createInfo{ 
-        .codeSize = code.size() * sizeof(char), 
-        .pCode = reinterpret_cast<const uint32_t*>(code.data()) 
-    };
-    vk::raii::ShaderModule shaderModule{ device, createInfo };
-
-    return shaderModule;
-}
-
-
 

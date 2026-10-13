@@ -3,21 +3,37 @@
 #include <memory>
 #include <stdexcept>
 
+#include "models.hpp" 
 #include "platform.hpp" 
 #include "renderer.hpp"
+#include "vulkan_shared.h"
+
+namespace gv = GVIS;
 
 static constexpr uint32_t WIDTH = 800;
 static constexpr uint32_t HEIGHT = 600;
 
 class GvisApplication {
     Platform* platform = nullptr;
-    std::unique_ptr<Renderer> renderer = nullptr;
+    std::shared_ptr<ModelLoader> modelLoader = nullptr;
+    std::shared_ptr<Renderer> renderer = nullptr;
     
 public:
-    void run(){
+    GvisApplication(){
         createPlatform();
-        renderer = std::make_unique<Renderer>();
-        renderer->Initialize(platform);
+        renderer = std::make_shared<Renderer>(platform);
+        renderer->Initialize();
+
+        modelLoader = std::make_shared<ModelLoader>();
+        modelLoader->Initialize(renderer);
+        Model model = modelLoader->LoadModel(gv::MODEL_PATH, gv::TEXTURE_PATH);
+
+        renderer->RenderModel(&model);
+        renderer->Build();
+    }
+
+    void run(){
+
         mainLoop();
 
         cleanup();

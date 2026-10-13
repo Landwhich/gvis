@@ -2,33 +2,29 @@
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
-
-#include <array>
-// uses range of 0 to 1 instead of default -1 to 1
+#define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
 #include <vector>
 
-/*
- */
-struct Vertex {
-    glm::vec3 pos;
-    glm::vec3 color;
-    glm::vec2 texCoord;
-
-    /*
-     * Vertex bindings describe the "rate" at which vertices are parsed
-     * in a sense. things like insatancing stride bytes etc...
-     */
-    static vk::VertexInputBindingDescription getBindingDescription();
-    /*
-     * Vertex attributes are each grouping of data: pos, colour, tex etc...
-     */
-    static std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions();
-
+struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
 };
 
-[[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code, vk::raii::Device& device);
+struct ShaderModule{
+    vk::raii::ShaderModule                  shaderModule = nullptr;
 
+    ShaderModule(const std::string& filename, const vk::raii::Device& device);
+
+  private: 
+//    const vk::raii::Device&                 device;
+};
+
+[[nodiscard]] vk::raii::ShaderModule createShaderModule(const std::vector<char>& code,      const vk::raii::Device& device);
 

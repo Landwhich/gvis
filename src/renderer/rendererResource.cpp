@@ -5,6 +5,9 @@
 
 #include "renderer.hpp"
 #include "shaders.hpp"
+#include "vulkan_shared.h"
+
+namespace gv = GVIS;
 
 /*
  * Helpers:
@@ -15,110 +18,6 @@ void transitionImageLayout( vk::raii::CommandBuffer &commandBuffer, const vk::ra
 
 void copyBufferToImage( vk::raii::CommandBuffer &commandBuffer, const vk::raii::Buffer &buffer, 
                         vk::raii::Image &image, uint32_t width, uint32_t height); 
-
-struct UniformBufferObject {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
-};
-
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
-
-
-// descriptor sets
-void Renderer::createDescriptorSetLayout() {
-    std::array<vk::DescriptorSetLayoutBinding, 2> bindings{{{
-        .binding = 0, 
-        .descriptorType = vk::DescriptorType::eUniformBuffer, 
-        .descriptorCount = 1, 
-        .stageFlags = vk::ShaderStageFlagBits::eVertex
-    } ,{
-        .binding = 1, 
-        .descriptorType = vk::DescriptorType::eCombinedImageSampler, 
-        .descriptorCount = 1, 
-        // stage flag for tex could also be in vert shader (heightmaps)
-        .stageFlags = vk::ShaderStageFlagBits::eFragment
-    }}};
-
-    vk::DescriptorSetLayoutCreateInfo layoutInfo{
-        .bindingCount = static_cast<uint32_t>(bindings.size()), 
-        .pBindings = bindings.data()
-    };
-    descriptorSetLayout = vk::raii::DescriptorSetLayout(device, layoutInfo);
-}
-
-void Renderer::createDescriptorPool() {
-    std::array<vk::DescriptorPoolSize, 2> poolSize{{{
-        .type = vk::DescriptorType::eUniformBuffer, 
-        .descriptorCount = gv::MAX_FRAMES_IN_FLIGHT
-    }, {
-        .type = vk::DescriptorType::eCombinedImageSampler, 
-        .descriptorCount = gv::MAX_FRAMES_IN_FLIGHT
-    }}};
-    vk::DescriptorPoolCreateInfo poolInfo{
-        .flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        .maxSets       = gv::MAX_FRAMES_IN_FLIGHT,
-        .poolSizeCount = static_cast<uint32_t>(poolSize.size()),
-        .pPoolSizes    = poolSize.data()
-    };
-    descriptorPool = vk::raii::DescriptorPool(this->device, poolInfo);
-}
-
-void Renderer::createDescriptorSets() {
-    std::vector<vk::DescriptorSetLayout> layouts(gv::MAX_FRAMES_IN_FLIGHT, *this->descriptorSetLayout);
-    vk::DescriptorSetAllocateInfo allocInfo {
-        .descriptorPool     = this->descriptorPool,
-        .descriptorSetCount = static_cast<uint32_t>(layouts.size()),
-        .pSetLayouts        = layouts.data()
-    };
-
-    this->descriptorSets = this->device.allocateDescriptorSets(allocInfo);
-
-    for (size_t i = 0; i < gv::MAX_FRAMES_IN_FLIGHT; i++) {
-        vk::DescriptorBufferInfo bufferInfo{ 
-            .buffer = this->uniformBuffers[i], 
-            .offset = 0, 
-            .range = sizeof(UniformBufferObject) 
-        };
-        vk::DescriptorImageInfo imageInfo{
-            .sampler = this->textureSampler, 
-            .imageView = this->textureImageView, 
-            .imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-        };
-        std::array<vk::WriteDescriptorSet, 2> descriptorWrites{{
-        {
-            .dstSet          = this->descriptorSets[i],
-            .dstBinding      = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = vk::DescriptorType::eUniformBuffer,
-            .pBufferInfo     = &bufferInfo
-        }, {
-            .dstSet          = this->descriptorSets[i],
-            .dstBinding      = 1,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType  = vk::DescriptorType::eCombinedImageSampler,
-            .pImageInfo      = &imageInfo
-        }}};
-        this->device.updateDescriptorSets(descriptorWrites, {}); 
-    }
-}
 
 void Renderer::createUniformBuffers() {
     for (size_t i = 0; i < gv::MAX_FRAMES_IN_FLIGHT; i++) {
@@ -147,7 +46,7 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
     UniformBufferObject ubo{};
     ubo.model = rotate(
         rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f))
-        ,   time * glm::radians(30.0f)
+        ,   time * glm::radians(00.0f)
         ,   glm::vec3(1.0f, 0.0f, 0.0f)
     );
     ubo.view = lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -207,7 +106,7 @@ void Renderer::createVertexBuffer(){
 
 void Renderer::createTextureImage(){
     int             texWidth, texHeight, texChannels;
-    stbi_uc*        pixels = stbi_load("textures/rova.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc*        pixels = stbi_load(gv::TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
     if (!pixels)
         throw std::runtime_error(std::string("could not load texture: [stbi] ") + stbi_failure_reason());
@@ -263,7 +162,7 @@ void Renderer::createTextureImageView(){
 }
 
 void Renderer::createTextureSampler() {
-    vk::PhysicalDeviceProperties properties = physicalDevice.getProperties();
+    vk::PhysicalDeviceProperties properties = vulkanDevice->getPhysicalDevice().getProperties();
     vk::SamplerCreateInfo samplerInfo{
         // filtering options for over and under samples
         .magFilter               = vk::Filter::eLinear,
@@ -284,7 +183,7 @@ void Renderer::createTextureSampler() {
         .compareOp               = vk::CompareOp::eAlways
     };
     // samplerInfo.minLod = static_cast<float>(mipLevels / 2);
-    textureSampler = vk::raii::Sampler(device, samplerInfo);
+    textureSampler = vk::raii::Sampler(vulkanDevice->getDevice(), samplerInfo);
 }
 
 void Renderer::createDepthResources(){
@@ -304,13 +203,13 @@ void Renderer::createDepthResources(){
 }
 
 void Renderer::createCommandPool(){
-vk::CommandPoolCreateInfo poolInfo{
-// hint flag may affect memory layout
-.flags            = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-.queueFamilyIndex = queueIndex
-};
+    vk::CommandPoolCreateInfo poolInfo{
+        // hint flag may affect memory layout
+        .flags            = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        .queueFamilyIndex = vulkanDevice->getQueueIndex()
+    };
 
-commandPool = vk::raii::CommandPool(device, poolInfo);
+commandPool = vk::raii::CommandPool(vulkanDevice->getDevice(), poolInfo);
 }
 
 void Renderer::createCommandBuffers(){
@@ -323,7 +222,7 @@ void Renderer::createCommandBuffers(){
         .commandBufferCount = gv::MAX_FRAMES_IN_FLIGHT
     };
 
-    commandBuffers = vk::raii::CommandBuffers( device, allocInfo );
+    commandBuffers = vk::raii::CommandBuffers(vulkanDevice->getDevice(), allocInfo );
 }
 
 void Renderer::recordCommandBuffer(uint32_t imageIndex){
@@ -383,21 +282,21 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex){
     };
     commandBuffer.beginRendering(renderingInfo);
 
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline->getPipeline());
     commandBuffer.setViewport(0, vk::Viewport{
-        0.0f,  
-        static_cast<float>(swapChainExtent.height), 
+        0.0f, 0.0,  
         static_cast<float>(swapChainExtent.width), 
+        static_cast<float>(swapChainExtent.height), 
         // height * -1 to compensate for y flip
-        -static_cast<float>(swapChainExtent.height), 
+        // -static_cast<float>(swapChainExtent.height), 
         0.0f, 1.0f
     });
     commandBuffer.setScissor(0, vk::Rect2D{vk::Offset2D{0, 0}, swapChainExtent});
     commandBuffer.bindVertexBuffers(0, *vertexBuffer, {0});
-    commandBuffer.bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+    commandBuffer.bindIndexBuffer(*indexBuffer, 0, vk::IndexTypeValue<decltype(indices)::value_type>::value);
     commandBuffers[frameIndex].bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets[frameIndex], nullptr
-    );
+            vk::PipelineBindPoint::eGraphics, graphicsPipeline->getLayout(), 0, 
+            *graphicsPipeline->getDescriptorSets()[frameIndex], nullptr );
     commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     commandBuffer.endRendering();
 
@@ -418,12 +317,12 @@ void Renderer::recordCommandBuffer(uint32_t imageIndex){
 void Renderer::createSyncObjects(){
     assert(this->presentCompleteSemaphores.empty() && this->renderFinishedSemaphores.empty() && this->inFlightFences.empty());
     for (size_t i = 0; i < this->swapChainImages.size(); i++) {
-        this->renderFinishedSemaphores.emplace_back(this->device, vk::SemaphoreCreateInfo());
+        this->renderFinishedSemaphores.emplace_back(vulkanDevice->getDevice(), vk::SemaphoreCreateInfo());
     }
 
     for (size_t i = 0; i < gv::MAX_FRAMES_IN_FLIGHT; i++) {
-        this->presentCompleteSemaphores.emplace_back(this->device, vk::SemaphoreCreateInfo());
-        this->inFlightFences.emplace_back(this->device, vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
+        this->presentCompleteSemaphores.emplace_back(vulkanDevice->getDevice(), vk::SemaphoreCreateInfo());
+        this->inFlightFences.emplace_back(vulkanDevice->getDevice(), vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled});
     }    
 }
 
@@ -530,14 +429,14 @@ std::pair<vk::raii::Image, vk::raii::DeviceMemory> Renderer::createImage(
         .sharingMode = vk::SharingMode::eExclusive
     };
 
-    vk::raii::Image image = vk::raii::Image(this->device, imageInfo);
+    vk::raii::Image image = vk::raii::Image(vulkanDevice->getDevice(), imageInfo);
 
     vk::MemoryRequirements memRequirements = image.getMemoryRequirements();
     vk::MemoryAllocateInfo allocInfo{
         .allocationSize  = memRequirements.size,
-        .memoryTypeIndex = this->findMemoryType(memRequirements.memoryTypeBits, properties)
+        .memoryTypeIndex = vulkanDevice->findMemoryType(memRequirements.memoryTypeBits, properties)
     };
-    vk::raii::DeviceMemory imageMemory = vk::raii::DeviceMemory(this->device, allocInfo);
+    vk::raii::DeviceMemory imageMemory = vk::raii::DeviceMemory(vulkanDevice->getDevice(), allocInfo);
     image.bindMemory(imageMemory, 0);
 
     return {std::move(image), std::move(imageMemory)};
@@ -576,30 +475,20 @@ std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> Renderer::createBuffer(
         .usage = usage, 
         .sharingMode = vk::SharingMode::eExclusive
     };
-    vk::raii::Buffer       buffer          = vk::raii::Buffer(device, bufferInfo);
+    vk::raii::Buffer       buffer          = vk::raii::Buffer(vulkanDevice->getDevice(), bufferInfo);
     // buffer created but needs to be assigned memory
     vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
     vk::MemoryAllocateInfo allocInfo{
         .allocationSize = memRequirements.size, 
-        .memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties)
+        .memoryTypeIndex = vulkanDevice->findMemoryType(memRequirements.memoryTypeBits, properties)
     };
-    vk::raii::DeviceMemory bufferMemory = vk::raii::DeviceMemory(device, allocInfo);
+    vk::raii::DeviceMemory bufferMemory = vk::raii::DeviceMemory(vulkanDevice->getDevice(), allocInfo);
     // 0 is the offset within the memory chunk
     // mem is used only for this call so we don't want to offset it internally
     buffer.bindMemory(*bufferMemory, 0);
     return {std::move(buffer), std::move(bufferMemory)};
     // ^-- return the &&val 
     // (raii handles cannot be copied)
-}
-
-uint32_t Renderer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
-    vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++){
-        // make sure index matches filter and req'd properties
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
-            return i;
-    }
-    throw std::runtime_error("failed to find suitable memory type!");
 }
 
 void Renderer::copyBuffer(vk::raii::Buffer &srcBuffer, vk::raii::Buffer &dstBuffer, vk::DeviceSize size) {
@@ -618,7 +507,7 @@ vk::raii::CommandBuffer Renderer::beginSingleTimeCommands() {
         ,   .level = vk::CommandBufferLevel::ePrimary
         ,   .commandBufferCount = 1
     };
-    vk::raii::CommandBuffer commandBuffer = std::move(vk::raii::CommandBuffers(this->device, allocInfo).front());
+    vk::raii::CommandBuffer commandBuffer = std::move(vk::raii::CommandBuffers(vulkanDevice->getDevice(), allocInfo).front());
 
     vk::CommandBufferBeginInfo beginInfo{.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
     commandBuffer.begin(beginInfo);
@@ -630,34 +519,14 @@ void Renderer::endSingleTimeCommands(vk::raii::CommandBuffer &&commandBuffer) {
     commandBuffer.end();
 
     vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandBuffer};
-    this->queue.submit(submitInfo, nullptr);
-    this->queue.waitIdle();
+    vulkanDevice->getQueue().submit(submitInfo, nullptr);
+    vulkanDevice->getQueue().waitIdle();
 }
 
 vk::Format Renderer::findDepthFormat() {
-        return findSupportedFormat(
-            {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint}
-            ,   vk::ImageTiling::eOptimal
-            ,   vk::FormatFeatureFlagBits::eDepthStencilAttachment
-        );
+    return vulkanDevice->findSupportedFormat(
+        {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint}
+        ,   vk::ImageTiling::eOptimal
+        ,   vk::FormatFeatureFlagBits::eDepthStencilAttachment
+    );
 }
-
-vk::Format Renderer::findSupportedFormat(
-    const std::vector<vk::Format>& candidates, 
-    vk::ImageTiling tiling, 
-    vk::FormatFeatureFlags features
-) {
-    for (const auto format : candidates) {
-        vk::FormatProperties props = this->physicalDevice.getFormatProperties(format);
-        
-        // candidacy will depend largely on tiling mode and usage
-        if (((tiling == vk::ImageTiling::eLinear) && ((props.linearTilingFeatures & features) == features)) ||
-        ((tiling == vk::ImageTiling::eOptimal) && ((props.optimalTilingFeatures & features) == features))) {
-            return format;
-        }
-    }
-
-throw std::runtime_error("failed to find supported format!");
-}
-
-
