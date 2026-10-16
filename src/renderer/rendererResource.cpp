@@ -1,8 +1,5 @@
 #include <chrono>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #include "renderer.hpp"
 #include "shaders.hpp"
 #include "vulkan_shared.h"
@@ -13,9 +10,6 @@ namespace gv = GVIS;
  * Helpers:
  */
 
-void transitionImageLayout( vk::raii::CommandBuffer &commandBuffer, const vk::raii::Image &image, 
-                            vk::ImageLayout oldLayout, vk::ImageLayout newLayout, uint32_t mipLevels );
-
 void copyBufferToImage( vk::raii::CommandBuffer &commandBuffer, const vk::raii::Buffer &buffer, 
                         vk::raii::Image &image, uint32_t width, uint32_t height); 
 
@@ -24,7 +18,9 @@ void Renderer::createUniformBuffers() {
         vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
         // we don't use a staging buffer here due to repeated rewrites every frame
         // no worth the overhead
-        auto [buffer, bufferMem]  = createBuffer(
+        auto [buffer, bufferMem] = gv::vkutil::CreateBuffer(
+            vulkanDevice->getDevice(),
+            vulkanDevice->getPhysicalDevice(),
             bufferSize, 
             vk::BufferUsageFlagBits::eUniformBuffer, 
             vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
@@ -64,7 +60,9 @@ void Renderer::updateUniformBuffer(uint32_t currentImage) {
 void Renderer::createIndexBuffer() {
     vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
-    auto [stagingBuffer, stagingBufferMemory] = createBuffer(
+    auto [stagingBuffer, stagingBufferMemory] = gv::vkutil::CreateBuffer(
+        vulkanDevice->getDevice(),
+        vulkanDevice->getPhysicalDevice(),
         bufferSize, 
         vk::BufferUsageFlagBits::eTransferSrc, 
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
@@ -74,7 +72,9 @@ void Renderer::createIndexBuffer() {
     memcpy(data, indices.data(), (size_t) bufferSize);
     stagingBufferMemory.unmapMemory();
 
-    std::tie(indexBuffer, indexBufferMemory) = createBuffer(
+    std::tie(indexBuffer, indexBufferMemory) = gv::vkutil::CreateBuffer(
+        vulkanDevice->getDevice(),
+        vulkanDevice->getPhysicalDevice(),
         bufferSize, 
         vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst, 
         vk::MemoryPropertyFlagBits::eDeviceLocal
@@ -85,7 +85,9 @@ void Renderer::createIndexBuffer() {
 
 void Renderer::createVertexBuffer(){
     vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-    auto [stagingBuffer, stagingBufferMemory] = createBuffer(
+    auto [stagingBuffer, stagingBufferMemory] = gv::vkutil::CreateBuffer(
+        vulkanDevice->getDevice(),
+        vulkanDevice->getPhysicalDevice(),
         bufferSize, 
         vk::BufferUsageFlagBits::eTransferSrc, 
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
@@ -95,7 +97,9 @@ void Renderer::createVertexBuffer(){
     memcpy(dataStaging, vertices.data(), bufferSize);
     stagingBufferMemory.unmapMemory();
 
-    std::tie(vertexBuffer, vertexBufferMemory) = createBuffer(
+    std::tie(vertexBuffer, vertexBufferMemory) = gv::vkutil::CreateBuffer(
+        vulkanDevice->getDevice(),
+        vulkanDevice->getPhysicalDevice(),
         bufferSize, 
         vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, 
         vk::MemoryPropertyFlagBits::eDeviceLocal
@@ -104,92 +108,12 @@ void Renderer::createVertexBuffer(){
     copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 }
 
-void Renderer::createTextureImage(){
-    int             texWidth, texHeight, texChannels;
-    stbi_uc*        pixels = stbi_load(gv::TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-
-    if (!pixels)
-        throw std::runtime_error(std::string("could not load texture: [stbi] ") + stbi_failure_reason());
-
-    vk::DeviceSize  imageSize = texWidth * texHeight * 4;
-    
-    auto [stagingBuffer, stagingBufferMemory] = createBuffer(
-        imageSize
-        ,   vk::BufferUsageFlagBits::eTransferSrc
-        ,   vk::MemoryPropertyFlagBits::eHostVisible 
-        | vk::MemoryPropertyFlagBits::eHostCoherent
-    );
-
-    void* data = stagingBufferMemory.mapMemory(0, imageSize);
-    memcpy(data, pixels, imageSize);
-    stagingBufferMemory.unmapMemory();
-
-    stbi_image_free(pixels);
-
-    std::tie(textureImage, textureImageMemory) = this->createImage(
-        texWidth,
-        texHeight,
-        vk::Format::eR8G8B8A8Srgb,
-        vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
-    );
-
-    vk::raii::CommandBuffer commandBuffer = beginSingleTimeCommands();
-    transitionImageLayout(
-        commandBuffer
-        ,   textureImage
-        ,   vk::ImageLayout::eUndefined
-        ,   vk::ImageLayout::eTransferDstOptimal
-        ,   1 // mip level placeholder
-    );
-    copyBufferToImage(
-        commandBuffer, stagingBuffer, textureImage, 
-        static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)
-    );
-    transitionImageLayout(
-        commandBuffer
-        ,   textureImage
-        ,   vk::ImageLayout::eTransferDstOptimal
-        ,   vk::ImageLayout::eShaderReadOnlyOptimal
-        ,   1 // mip level placeholder
-    );
-    endSingleTimeCommands(std::move(commandBuffer));
-}
-
-void Renderer::createTextureImageView(){
-    textureImageView = createImageView(*textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor , 1);
-}
-
-void Renderer::createTextureSampler() {
-    vk::PhysicalDeviceProperties properties = vulkanDevice->getPhysicalDevice().getProperties();
-    vk::SamplerCreateInfo samplerInfo{
-        // filtering options for over and under samples
-        .magFilter               = vk::Filter::eLinear,
-        .minFilter               = vk::Filter::eLinear,
-        .mipmapMode              = vk::SamplerMipmapMode::eLinear,
-        .mipLodBias              = 0.0f,
-        .minLod                  = 0.0f,
-        .maxLod                  = vk::LodClampNone,
-        // address modes for repeating textures per axis
-        .addressModeU            = vk::SamplerAddressMode::eRepeat,
-        .addressModeV            = vk::SamplerAddressMode::eRepeat,
-        .addressModeW            = vk::SamplerAddressMode::eRepeat,
-        .anisotropyEnable        = vk::True,
-        .maxAnisotropy           = properties.limits.maxSamplerAnisotropy,
-        .borderColor             = vk::BorderColor::eIntOpaqueBlack,
-        .unnormalizedCoordinates = vk::False,
-        .compareEnable           = vk::False,
-        .compareOp               = vk::CompareOp::eAlways
-    };
-    // samplerInfo.minLod = static_cast<float>(mipLevels / 2);
-    textureSampler = vk::raii::Sampler(vulkanDevice->getDevice(), samplerInfo);
-}
-
 void Renderer::createDepthResources(){
     vk::Format depthFormat = findDepthFormat();
 
-    std::tie(this->depthImage, this->depthImageMemory) = createImage(
+    std::tie(this->depthImage, this->depthImageMemory) = gv::vkutil::CreateImage(
+        vulkanDevice->getDevice(),
+        vulkanDevice->getPhysicalDevice(),
         this->swapChainExtent.width, 
         this->swapChainExtent.height, 
         // this->msaaSamples,
@@ -199,7 +123,8 @@ void Renderer::createDepthResources(){
         vk::MemoryPropertyFlagBits::eDeviceLocal
     );
 
-    this->depthImageView = createImageView(this->depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth, 1); 
+    this->depthImageView = gv::vkutil::CreateImageView(
+            vulkanDevice->getDevice(), this->depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth, 1); 
 }
 
 void Renderer::createCommandPool(){
@@ -365,163 +290,17 @@ void Renderer::transition_image_layout(
     commandBuffers[frameIndex].pipelineBarrier2(dependency_info);
 }
 
-void transitionImageLayout(
-    vk::raii::CommandBuffer &commandBuffer, 
-    const vk::raii::Image &image, 
-    vk::ImageLayout oldLayout, 
-    vk::ImageLayout newLayout,  
-    uint32_t mipLevels
-) {
-    vk::ImageMemoryBarrier barrier {
-        .oldLayout           = oldLayout,
-        .newLayout           = newLayout,
-        // queue family index is for ownership transfer
-        // ignored is not the default and is therefore required here
-        .srcQueueFamilyIndex = vk::QueueFamilyIgnored,
-        .dstQueueFamilyIndex = vk::QueueFamilyIgnored,
-        .image               = image,
-        .subresourceRange    = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor, 
-            .levelCount = mipLevels, 
-            .layerCount = 1
-        },
-    };
-    vk::PipelineStageFlags sourceStage;
-    vk::PipelineStageFlags destinationStage;
-
-    if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal) {
-        barrier.srcAccessMask = {};
-        barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-        sourceStage      = vk::PipelineStageFlagBits::eTopOfPipe;
-        destinationStage = vk::PipelineStageFlagBits::eTransfer;
-    } else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
-        sourceStage      = vk::PipelineStageFlagBits::eTransfer;
-        destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-    } else {
-        throw std::invalid_argument("unsupported layout transition!");
-    }
-    commandBuffer.pipelineBarrier(sourceStage, destinationStage, {}, {}, nullptr, barrier);
-}
-
-
-std::pair<vk::raii::Image, vk::raii::DeviceMemory> Renderer::createImage(
-    uint32_t width, 
-    uint32_t height, 
-    vk::Format format, 
-    vk::ImageTiling tiling, 
-    vk::ImageUsageFlags usage, 
-    vk::MemoryPropertyFlags properties 
-) {
-    vk::ImageCreateInfo imageInfo{
-        .imageType   = vk::ImageType::e2D,
-        .format      = format,
-        // dictates number of layers, hence depth must be one
-        .extent      = {width, height, 1},
-        .mipLevels   = 1,
-        .arrayLayers = 1,
-        .samples     = vk::SampleCountFlagBits::e1,
-        .tiling      = tiling,
-        .usage       = usage,
-        .sharingMode = vk::SharingMode::eExclusive
-    };
-
-    vk::raii::Image image = vk::raii::Image(vulkanDevice->getDevice(), imageInfo);
-
-    vk::MemoryRequirements memRequirements = image.getMemoryRequirements();
-    vk::MemoryAllocateInfo allocInfo{
-        .allocationSize  = memRequirements.size,
-        .memoryTypeIndex = vulkanDevice->findMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-    vk::raii::DeviceMemory imageMemory = vk::raii::DeviceMemory(vulkanDevice->getDevice(), allocInfo);
-    image.bindMemory(imageMemory, 0);
-
-    return {std::move(image), std::move(imageMemory)};
-}
-
-void copyBufferToImage(
-    vk::raii::CommandBuffer &commandBuffer, 
-    const vk::raii::Buffer &buffer, 
-    vk::raii::Image &image, 
-    uint32_t width, 
-    uint32_t height
-) {
-    vk::BufferImageCopy region{
-        .bufferOffset      = 0,
-        .bufferRowLength   = 0,
-        .bufferImageHeight = 0,
-        .imageSubresource  = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor, 
-            .mipLevel = 0, 
-            .baseArrayLayer = 0, 
-            .layerCount = 1
-        },
-        .imageOffset       = {0, 0, 0},
-        .imageExtent       = {width, height, 1}};
-
-    commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, region);
-}
-
-std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> Renderer::createBuffer(
-    vk::DeviceSize size,                //buffer size 
-    vk::BufferUsageFlags usage,         //how the buffer will be used 
-    vk::MemoryPropertyFlags properties  
-) {
-    vk::BufferCreateInfo   bufferInfo{
-        .size = size, 
-        .usage = usage, 
-        .sharingMode = vk::SharingMode::eExclusive
-    };
-    vk::raii::Buffer       buffer          = vk::raii::Buffer(vulkanDevice->getDevice(), bufferInfo);
-    // buffer created but needs to be assigned memory
-    vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
-    vk::MemoryAllocateInfo allocInfo{
-        .allocationSize = memRequirements.size, 
-        .memoryTypeIndex = vulkanDevice->findMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-    vk::raii::DeviceMemory bufferMemory = vk::raii::DeviceMemory(vulkanDevice->getDevice(), allocInfo);
-    // 0 is the offset within the memory chunk
-    // mem is used only for this call so we don't want to offset it internally
-    buffer.bindMemory(*bufferMemory, 0);
-    return {std::move(buffer), std::move(bufferMemory)};
-    // ^-- return the &&val 
-    // (raii handles cannot be copied)
-}
-
 void Renderer::copyBuffer(vk::raii::Buffer &srcBuffer, vk::raii::Buffer &dstBuffer, vk::DeviceSize size) {
-    vk::raii::CommandBuffer commandCopyBuffer = beginSingleTimeCommands();
+    vk::raii::CommandBuffer commandCopyBuffer = gv::vkutil::BeginSingleTimeCommands(
+            this->commandPool ,vulkanDevice->getDevice());
     commandCopyBuffer.copyBuffer(*srcBuffer, *dstBuffer, vk::BufferCopy{
         .srcOffset = 0, 
         .dstOffset = 0, 
         .size = size
     }); 
-    endSingleTimeCommands(std::move(commandCopyBuffer));
+    gv::vkutil::EndSingleTimeCommands(std::move(commandCopyBuffer), vulkanDevice->getQueue());
 }
 
-vk::raii::CommandBuffer Renderer::beginSingleTimeCommands() {
-    vk::CommandBufferAllocateInfo allocInfo{
-        .commandPool = this->commandPool
-        ,   .level = vk::CommandBufferLevel::ePrimary
-        ,   .commandBufferCount = 1
-    };
-    vk::raii::CommandBuffer commandBuffer = std::move(vk::raii::CommandBuffers(vulkanDevice->getDevice(), allocInfo).front());
-
-    vk::CommandBufferBeginInfo beginInfo{.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
-    commandBuffer.begin(beginInfo);
-
-    return commandBuffer;
-}
-
-void Renderer::endSingleTimeCommands(vk::raii::CommandBuffer &&commandBuffer) {
-    commandBuffer.end();
-
-    vk::SubmitInfo submitInfo{.commandBufferCount = 1, .pCommandBuffers = &*commandBuffer};
-    vulkanDevice->getQueue().submit(submitInfo, nullptr);
-    vulkanDevice->getQueue().waitIdle();
-}
 
 vk::Format Renderer::findDepthFormat() {
     return vulkanDevice->findSupportedFormat(

@@ -1,0 +1,80 @@
+#include <GLFW/glfw3.h>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+
+#include "models.hpp" 
+#include "model_loader.hpp"
+#include "platform.hpp" 
+#include "renderer.hpp"
+#include <vulkan_shared.h>
+
+namespace gv = GVIS;
+
+static constexpr uint32_t WIDTH = 800;
+static constexpr uint32_t HEIGHT = 600;
+
+class GvisApplication {
+    Platform* platform = nullptr;
+    std::shared_ptr<ModelLoader> modelLoader = nullptr;
+    std::shared_ptr<Renderer> renderer = nullptr;
+    
+public:
+    GvisApplication(){
+        createPlatform();
+        renderer = std::make_shared<Renderer>(platform);
+        renderer->Initialize();
+
+        modelLoader = std::make_shared<ModelLoader>(renderer);
+        // Model model = modelLoader->LoadModel(gv::MODEL_PATH, gv::TEXTURE_PATH);
+        Model model2 = modelLoader->LoadModel("resources/models/cow.obj", {});
+
+        // renderer->RenderModel(&model);
+        renderer->RenderModel(&model2);
+        renderer->Build();
+    }
+
+    void run(){
+
+        mainLoop();
+
+        cleanup();
+    }
+
+    void createPlatform(){
+        platform = Platform::getInstance();
+        if(platform->initWindow(WIDTH, HEIGHT, "oOOOo geeegvis") != EXIT_SUCCESS){
+            throw std::runtime_error("failed to create glfw window");
+        }
+    }
+
+
+private:
+    void mainLoop(){
+    
+        while (!glfwWindowShouldClose(platform->getWindow())) {
+            glfwPollEvents();
+            renderer->DrawFrame();
+        }
+        renderer->IdleDevice();
+    }
+
+    void cleanup(){
+        platform->cleanupWindow();
+        renderer->Cleanup();
+    }
+};
+
+// throw std::runtime_error("failed");
+int main(){
+    GvisApplication gvis;
+
+    try {
+        gvis.run();
+    } catch(const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}

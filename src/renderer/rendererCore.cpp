@@ -21,31 +21,11 @@ void Renderer::createImageViews() {
 
     swapChainImageViews.reserve(swapChainImages.size());
     for ( auto &image: swapChainImages ) {
-        swapChainImageViews.emplace_back(createImageView(
-            image, swapChainSurfaceFormat.format, 
+        swapChainImageViews.emplace_back(gv::vkutil::CreateImageView(
+            vulkanDevice->getDevice(), image, swapChainSurfaceFormat.format, 
             vk::ImageAspectFlagBits::eColor, 1
         ));
     }
-}
-
-vk::raii::ImageView Renderer::createImageView(
-    vk::Image const &image, 
-    vk::Format format, 
-    vk::ImageAspectFlags aspectFlags,
-    uint32_t mipLevels
-) {
-    vk::ImageViewCreateInfo viewInfo{
-        .image            = image,
-        .viewType         = vk::ImageViewType::e2D,
-        .format           = format,
-        .subresourceRange = {
-            .aspectMask = aspectFlags,  
-            .baseMipLevel = 0, 
-            .levelCount = mipLevels, 
-            .baseArrayLayer = 0, 
-            .layerCount = 1
-    }};
-    return vk::raii::ImageView(vulkanDevice->getDevice(), viewInfo);
 }
 
 /* Swap chain setup 

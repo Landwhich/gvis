@@ -9,8 +9,10 @@
 #include "models.hpp"
 #include "pipeline.hpp"
 #include "platform.hpp"
+#include <vulkan_shared.h>
 
-class VulkanDevice;
+namespace gv = GVIS;
+
 struct Model;
 struct Vertex;
 
@@ -68,14 +70,20 @@ class Renderer{
     // NOTE: research decl order in class affecting delete order
     vk::raii::DebugUtilsMessengerEXT        debugMessenger = nullptr;
 public:
-
+    
     Renderer(Platform* platform);
     void Initialize();
     void Build();
     void DrawFrame(); void RenderModel(Model* model);
     void IdleDevice();
     void Cleanup();
-
+    const std::pair< gv::DeviceContext, gv::GraphicsContext > getContext() const { 
+        return std::pair{
+            gv::DeviceContext{ vulkanDevice->getContext() }
+        ,   gv::GraphicsContext{
+                    .commandPool = this->commandPool 
+            }
+        };}
 private:
 
     // * * * * * * * * * * * * 
@@ -155,22 +163,6 @@ private:
 
     void createIndexBuffer();
 
-    /*
-     * Textures should always get stored in GPU granted they aren't getting 
-     * frequently updated (they shouldn't be), and we have the vram for them
-     * To do this images are staged in host and then sent to GPU
-     */ 
-    void createTextureImage();
-
-    void createTextureImageView();
-    
-    /*
-     * Sampler enables filters and transforms for the image before
-     * passing texels to shader
-     * Is independant of images and image views and can be used across multiple
-     */
-    void createTextureSampler();
-    
     void createUniformBuffers();
 
     void createDepthResources();
@@ -222,22 +214,7 @@ private:
     );
     // queries for first supported format in a list of candidates
     vk::Format findDepthFormat();
-    // shaders could be used for this but better to use images in vulkan as they 
-    // contain simpler 2D texels
-    std::pair<vk::raii::Image, vk::raii::DeviceMemory> createImage(
-        uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, 
-        vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties 
-    );
 
-
-    void endSingleTimeCommands(vk::raii::CommandBuffer &&commandBuffer);
-    vk::raii::CommandBuffer beginSingleTimeCommands();
-    // find the correct type of GPU memory based on reqs  
-    std::pair<vk::raii::Buffer, vk::raii::DeviceMemory> createBuffer(
-        vk::DeviceSize size, 
-        vk::BufferUsageFlags usage, 
-        vk::MemoryPropertyFlags properties
-    );
     void copyBuffer(
             vk::raii::Buffer &srcBuffer, 
             vk::raii::Buffer &dstBuffer, 
@@ -250,9 +227,6 @@ private:
     uint32_t chooseSwapMinImageCount(vk::SurfaceCapabilitiesKHR const &surfaceCapabilities);
     vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
     vk::PresentModeKHR chooseSwapPresentMode(std::vector<vk::PresentModeKHR> const &availablePresentModes);
-     // Uses a lot of the same logic as createImageViews, worth having in
-     // its own function handy for textures and other images
-    vk::raii::ImageView createImageView(vk::Image const &image, vk::Format format, vk::ImageAspectFlags aspectFlags, uint32_t mipLevels);
 
 };
 

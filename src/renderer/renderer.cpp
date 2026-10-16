@@ -40,9 +40,9 @@ void Renderer::Initialize(){
 void Renderer::Build(){
     std::cout << " - Creating Resources...\n";
     this->createDepthResources();
-    this->createTextureImage();
-    this->createTextureImageView();
-    this->createTextureSampler();
+    // this->createTextureImage();
+    // this->createTextureImageView();
+    // this->createTextureSampler();
 
     this->createVertexBuffer();
     this->createIndexBuffer();
