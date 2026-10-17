@@ -18,6 +18,9 @@ struct Texture : public Resource{
                                 gv::GraphicsContext>& resourceContext) override;
     void doUnload() override;
 
+    const vk::raii::ImageView& getImageView() const { return textureImageView; }
+    const vk::raii::Sampler& getSampler() const { return textureSampler; }
+
   private:
     std::string                 name; 
 

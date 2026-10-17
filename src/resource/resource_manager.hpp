@@ -49,7 +49,7 @@ class ResourceHandle{
         return resource ? resource->GetID() : empty; 
     }
     // operator overloads (for convenience)
-    T* operator->() const { return resource.Get(); }
+    T* operator->() const { return resource.get(); }
     T& operator*() const { return *resource; }
     explicit operator bool() const { return IsValid(); }
 };

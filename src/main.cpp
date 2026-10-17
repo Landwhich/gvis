@@ -29,16 +29,14 @@ public:
         renderer->Initialize();
 
         resourceManager = std::make_unique<ResourceManager>(renderer->getContext()); 
-        auto pVikingTex = resourceManager->LoadResource<Texture>("viking_tex");
-        
-        
+        auto pVikingTex = resourceManager->LoadResource<Texture>("viking_tex");  
 
         modelLoader = std::make_shared<ModelLoader>();
         modelLoader->Initialize(renderer);
         Model model = modelLoader->LoadModel(gv::MODEL_PATH, gv::TEXTURE_PATH);
 
         renderer->RenderModel(&model);
-        renderer->Build();
+        renderer->Build(pVikingTex->getImageView(), pVikingTex->getSampler());
     }
 
     void run(){

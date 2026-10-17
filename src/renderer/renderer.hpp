@@ -73,7 +73,8 @@ public:
     
     Renderer(Platform* platform);
     void Initialize();
-    void Build();
+    void Build(const vk::raii::ImageView& texImageView, 
+            const vk::raii::Sampler& sampler);
     void DrawFrame(); void RenderModel(Model* model);
     void IdleDevice();
     void Cleanup();

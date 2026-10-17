@@ -37,7 +37,7 @@ void Renderer::Initialize(){
     this->createCommandPool();
 }
 
-void Renderer::Build(){
+void Renderer::Build(const vk::raii::ImageView& texImageView, const vk::raii::Sampler& sampler){
     std::cout << " - Creating Resources...\n";
     this->createDepthResources();
     // this->createTextureImage();
@@ -48,7 +48,7 @@ void Renderer::Build(){
     this->createIndexBuffer();
     this->createUniformBuffers();
     std::cout << " - Creating Pipeline Descriptors...\n";
-    graphicsPipeline->GenDescriptorSet(uniformBuffers, textureImageView, textureSampler);
+    graphicsPipeline->GenDescriptorSet(uniformBuffers, texImageView, sampler);
     this->createCommandBuffers();
     this->createSyncObjects();
 }
