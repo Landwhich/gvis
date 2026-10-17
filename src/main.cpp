@@ -17,7 +17,6 @@ static constexpr uint32_t HEIGHT = 600;
 
 class GvisApplication {
     Platform* platform = nullptr;
-    std::shared_ptr<ModelLoader> modelLoader = nullptr;
     std::shared_ptr<Renderer> renderer = nullptr;
     std::unique_ptr<ResourceManager> resourceManager = nullptr;
     
@@ -30,12 +29,9 @@ public:
 
         resourceManager = std::make_unique<ResourceManager>(renderer->getContext()); 
         auto pVikingTex = resourceManager->LoadResource<Texture>("viking_tex");  
+        auto pVikingRoom = resourceManager->LoadResource<Mesh>("viking_room", gv::MODEL_FILE);  
 
-        modelLoader = std::make_shared<ModelLoader>();
-        modelLoader->Initialize(renderer);
-        Model model = modelLoader->LoadModel(gv::MODEL_PATH, gv::TEXTURE_PATH);
-
-        renderer->RenderModel(&model);
+        renderer->RenderModel(pVikingRoom.Get());
         renderer->Build(pVikingTex->getImageView(), pVikingTex->getSampler());
     }
 

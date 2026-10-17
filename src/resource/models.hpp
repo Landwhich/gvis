@@ -13,38 +13,16 @@
 #include <array>
 #include <filesystem>
 #include <memory>
+#include <string>
 #include <vector>
+
+#include "resource_manager.hpp"
+#include "materials.hpp"
 
 namespace fs = std::filesystem;
 
 // forward decls
-struct Vertex;
 class Renderer;
-
-struct Model{
-    std::vector<uint32_t>indices; 
-    std::vector<Vertex>vertices; 
-};
-
-class ModelLoader{
-public: 
-    ModelLoader() = default;
-
-    void Initialize(std::shared_ptr<Renderer> renderer){
-        if (!renderer)
-            throw std::runtime_error("renderer is invalid");
-        this->_renderer = renderer;
-    }
-        
-    Model LoadModel(fs::path modelPath, fs::path texture);
-
-private:
-    std::shared_ptr<Renderer> _renderer;
-
-};
-
-/*
- */
 struct Vertex {
     glm::vec3 pos;
     glm::vec3 color;
@@ -75,3 +53,22 @@ namespace std {
     };
 }
 
+struct Mesh : public Resource {
+    explicit Mesh(const std::string& id, const fs::path& path) 
+        : Resource(id), modelPath(path) {};
+    ~Mesh() { Unload(); }
+
+    bool doLoad(const std::pair<gv::DeviceContext, gv::GraphicsContext>& 
+            resourceContext) override;
+    void doUnload() override {};
+
+    std::vector<uint32_t>indices; 
+    std::vector<Vertex>vertices; 
+
+    const fs::path& modelPath;
+};
+
+struct Model {
+    std::shared_ptr<Texture> texture;
+    std::shared_ptr<Mesh> mesh;
+};

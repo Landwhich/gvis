@@ -13,9 +13,6 @@
 
 namespace gv = GVIS;
 
-struct Model;
-struct Vertex;
-
 class Renderer{
     Platform*                               platform = nullptr;
     //vulkan/vulkanDevice.cpp
@@ -49,14 +46,9 @@ class Renderer{
     vk::raii::Buffer                        indexBuffer        = nullptr;
     vk::raii::DeviceMemory                  indexBufferMemory  = nullptr;
 
-    vk::raii::Image                         textureImage = nullptr;
-    vk::raii::DeviceMemory                  textureImageMemory = nullptr;
-
     vk::raii::Image                         depthImage = nullptr;
     vk::raii::DeviceMemory                  depthImageMemory = nullptr;
     vk::raii::ImageView                     depthImageView = nullptr;
-    vk::raii::ImageView                     textureImageView = nullptr;   
-    vk::raii::Sampler                       textureSampler = nullptr;
 
     std::vector<vk::raii::Buffer>           uniformBuffers;
     std::vector<vk::raii::DeviceMemory>     uniformBuffersMemory;
@@ -75,7 +67,8 @@ public:
     void Initialize();
     void Build(const vk::raii::ImageView& texImageView, 
             const vk::raii::Sampler& sampler);
-    void DrawFrame(); void RenderModel(Model* model);
+    void DrawFrame(); 
+    void RenderModel(Mesh* mesh);
     void IdleDevice();
     void Cleanup();
     const std::pair< gv::DeviceContext, gv::GraphicsContext > getContext() const { 

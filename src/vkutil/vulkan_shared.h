@@ -7,13 +7,18 @@
 import vulkan_hpp;
 #endif
 
-#include <vector>
 #include <array>
+#include <filesystem>
+#include <vector>
+
+namespace fs = std::filesystem;
 
 namespace GVIS {
 
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+
 const std::string  MODEL_PATH           = "resources/models/viking_room.obj";
+const fs::path      MODEL_FILE          = "viking_room.obj";
 const std::string  TEXTURE_PATH         = "resources/textures/viking_room.png";
 
 static constexpr std::array<const char*, 1> VALIDATION_LAYERS = {

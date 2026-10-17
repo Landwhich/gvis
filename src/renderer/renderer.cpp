@@ -54,10 +54,10 @@ void Renderer::Build(const vk::raii::ImageView& texImageView, const vk::raii::Sa
 }
 
 
-void Renderer::RenderModel(Model* model){
-    for (const auto& v : model->vertices)
+void Renderer::RenderModel(Mesh* mesh){
+    for (const auto& v : mesh->vertices)
         this->vertices.push_back(v);
-    for (const auto& i : model->indices)
+    for (const auto& i : mesh->indices)
         this->indices.push_back(i);
 }
 
