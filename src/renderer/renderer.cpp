@@ -22,8 +22,8 @@ void Renderer::Initialize(){
     // create Device  
     std::cout << " - Creating Device...\n";
     vulkanDevice = std::make_unique<VulkanDevice>(this->instance, this->surface, DeviceParams{
-            .requiredExts = gv::REQUIRED_DEVICE_EXT,
-            .optionalExts = {},
+        .requiredExts = gv::REQUIRED_DEVICE_EXT,
+        .optionalExts = {},
     }); 
 
     std::cout << " - Creating Swap Chain...\n";
@@ -34,6 +34,8 @@ void Renderer::Initialize(){
     graphicsPipeline = std::make_shared<Pipeline>(vulkanDevice->getDevice());
     graphicsPipeline->DescriptorSetup();
     graphicsPipeline->Create(this->swapChainSurfaceFormat, findDepthFormat());
+    
+    std::cout << " - Creating Command Pool...\n";
     this->createCommandPool();
 }
 

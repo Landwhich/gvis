@@ -5,22 +5,24 @@ Vulkan-based engine project from scratch cause I can. Most of this is based off 
 
 I'll keep track of a few small ideas / milestones on this project here and the rest on my little project site: [here](https://quartz.frederich.ca/3D-Graphics-Project)
 ![alt text](image.png)
-
 ### Project looks like this guy ⭣
 ```
 .
-├── CMakeLists.txt 
 ├── include 
 ├── resources
 │   ├── models
 │   └── textures
 ├── shaders
 └── src
-    ├── fileio [ file r / w ]
-    ├── platform [ using glfw ]
+    ├── fileio
+    ├── platform
     ├── renderer
+    │   ├── descriptors
+    │   ├── device
+    │   ├── pipeline
     │   └── shaders [ shader helpers ]
-    └── vulkan [ device ]
+    ├── resource [ manager and models ]
+    └── vkutils
 ```
 
 ### Building the Project
@@ -31,7 +33,7 @@ cmake --build build --target run
 ```
 
 ### Dependencies
+- cmake
 - MoltenVK
-- Cmake
 - stb_image
 - tinyobj

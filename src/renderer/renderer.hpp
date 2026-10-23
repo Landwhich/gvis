@@ -75,7 +75,7 @@ public:
         return std::pair{
             gv::DeviceContext{ vulkanDevice->getContext() }
         ,   gv::GraphicsContext{
-                    .commandPool = this->commandPool 
+                .commandPool = this->commandPool 
             }
         };}
 private:

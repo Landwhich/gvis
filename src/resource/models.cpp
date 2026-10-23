@@ -39,10 +39,12 @@ bool Mesh::doLoad(const std::pair<gv::DeviceContext, gv::GraphicsContext>& resou
                 attrib.vertices[3 * index.vertex_index + 2]
             };
 
-            vertex.texCoord = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-            };
+            if (!attrib.texcoords.empty()) {
+                vertex.texCoord = {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+            }
 
             vertex.color = {1.0f, 1.0f, 1.0f};
 

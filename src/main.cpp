@@ -19,8 +19,7 @@ class GvisApplication {
     Platform* platform = nullptr;
     std::shared_ptr<Renderer> renderer = nullptr;
     std::unique_ptr<ResourceManager> resourceManager = nullptr;
-    
-public:
+    public:
     GvisApplication(){
 
         createPlatform();
@@ -29,7 +28,9 @@ public:
 
         resourceManager = std::make_unique<ResourceManager>(renderer->getContext()); 
         auto pVikingTex = resourceManager->LoadResource<Texture>("viking_tex");  
-        auto pVikingRoom = resourceManager->LoadResource<Mesh>("viking_room", gv::MODEL_FILE);  
+        std::cout << "making cow model\n";
+        auto pVikingRoom = resourceManager->LoadResource<Mesh>("viking_room", "cow.obj");  
+        std::cout << "done making cow model\n";
 
         renderer->RenderModel(pVikingRoom.Get());
         renderer->Build(pVikingTex->getImageView(), pVikingTex->getSampler());
