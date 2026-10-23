@@ -7,10 +7,12 @@
 #pragma GCC diagnostic pop
 
 
+#include <iostream>
+
 /*
  * tiny obj impl
  */
-Model ModelLoader::LoadModel(fs::path modelPath, fs::path texturePath){
+bool Mesh::doLoad(const std::pair<gv::DeviceContext, gv::GraphicsContext>& resourceContext){
     tinyobj::attrib_t                attrib;
     std::vector<tinyobj::shape_t>    shapes;
     std::vector<tinyobj::material_t> materials;
@@ -18,11 +20,15 @@ Model ModelLoader::LoadModel(fs::path modelPath, fs::path texturePath){
     
     std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath.string().c_str()))
-        throw std::runtime_error(warn + err);
+    fs::path path{("resources/models") / this->modelPath}; 
 
-    Model model{};
-    
+    if (!tinyobj::LoadObj(
+        &attrib, &shapes, &materials, &warn, &err, path.string().c_str())
+    ) {
+        std::cerr << modelPath.string();
+        return false;
+    }
+
     for (const auto& shape : shapes){
         for (const auto& index : shape.mesh.indices){
             Vertex vertex{};
@@ -33,21 +39,23 @@ Model ModelLoader::LoadModel(fs::path modelPath, fs::path texturePath){
                 attrib.vertices[3 * index.vertex_index + 2]
             };
 
-            vertex.texCoord = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-            };
+            if (!attrib.texcoords.empty()) {
+                vertex.texCoord = {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+            }
 
             vertex.color = {1.0f, 1.0f, 1.0f};
 
-            auto [it, inserted] = uniqueVertices.insert({vertex, static_cast<uint32_t>(model.vertices.size())});
+            auto [it, inserted] = uniqueVertices.insert({vertex, static_cast<uint32_t>(this->vertices.size())});
             if (inserted)
-                model.vertices.push_back(vertex);
+                this->vertices.push_back(vertex);
 
-            model.indices.push_back(it->second);
+            this->indices.push_back(it->second);
         }
     }
-    return model;
+    return true;
 }
 
 vk::VertexInputBindingDescription Vertex::getBindingDescription() {

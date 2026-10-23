@@ -22,8 +22,8 @@ void Renderer::Initialize(){
     // create Device  
     std::cout << " - Creating Device...\n";
     vulkanDevice = std::make_unique<VulkanDevice>(this->instance, this->surface, DeviceParams{
-            .requiredExts = gv::REQUIRED_DEVICE_EXT,
-            .optionalExts = {},
+        .requiredExts = gv::REQUIRED_DEVICE_EXT,
+        .optionalExts = {},
     }); 
 
     std::cout << " - Creating Swap Chain...\n";
@@ -34,30 +34,32 @@ void Renderer::Initialize(){
     graphicsPipeline = std::make_shared<Pipeline>(vulkanDevice->getDevice());
     graphicsPipeline->DescriptorSetup();
     graphicsPipeline->Create(this->swapChainSurfaceFormat, findDepthFormat());
+    
+    std::cout << " - Creating Command Pool...\n";
     this->createCommandPool();
 }
 
-void Renderer::Build(){
+void Renderer::Build(const vk::raii::ImageView& texImageView, const vk::raii::Sampler& sampler){
     std::cout << " - Creating Resources...\n";
     this->createDepthResources();
-    this->createTextureImage();
-    this->createTextureImageView();
-    this->createTextureSampler();
+    // this->createTextureImage();
+    // this->createTextureImageView();
+    // this->createTextureSampler();
 
     this->createVertexBuffer();
     this->createIndexBuffer();
     this->createUniformBuffers();
     std::cout << " - Creating Pipeline Descriptors...\n";
-    graphicsPipeline->GenDescriptorSet(uniformBuffers, textureImageView, textureSampler);
+    graphicsPipeline->GenDescriptorSet(uniformBuffers, texImageView, sampler);
     this->createCommandBuffers();
     this->createSyncObjects();
 }
 
 
-void Renderer::RenderModel(Model* model){
-    for (const auto& v : model->vertices)
+void Renderer::RenderModel(Mesh* mesh){
+    for (const auto& v : mesh->vertices)
         this->vertices.push_back(v);
-    for (const auto& i : model->indices)
+    for (const auto& i : mesh->indices)
         this->indices.push_back(i);
 }
 

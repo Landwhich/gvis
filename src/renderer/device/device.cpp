@@ -160,8 +160,7 @@ vk::Format VulkanDevice::findSupportedFormat(
             return format;
         }
     }
-
-throw std::runtime_error("failed to find supported format!");
+    throw std::runtime_error("failed to find supported format!");
 }
 
 uint32_t VulkanDevice::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const {

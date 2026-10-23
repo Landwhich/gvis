@@ -29,14 +29,15 @@ set_target_properties(gvis PROPERTIES
 
 target_include_directories(gvis PRIVATE
     src/fileio
-    src/models
     src/platform
     src/renderer
     src/renderer/descriptors
     src/renderer/device
     src/renderer/pipeline
     src/renderer/shaders
-    src/vulkan
+    src/renderer/swapchain
+    src/resource
+    src/vkutil
 )
 
 # Vendored headers (stb, tinyobj) as SYSTEM => their warnings are suppressed,

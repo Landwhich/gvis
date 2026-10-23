@@ -6,6 +6,8 @@
 #include "models.hpp" 
 #include "platform.hpp" 
 #include "renderer.hpp"
+#include "resource_manager.hpp"
+#include "materials.hpp"
 #include "vulkan_shared.h"
 
 namespace gv = GVIS;
@@ -15,21 +17,23 @@ static constexpr uint32_t HEIGHT = 600;
 
 class GvisApplication {
     Platform* platform = nullptr;
-    std::shared_ptr<ModelLoader> modelLoader = nullptr;
     std::shared_ptr<Renderer> renderer = nullptr;
-    
-public:
+    std::unique_ptr<ResourceManager> resourceManager = nullptr;
+    public:
     GvisApplication(){
+
         createPlatform();
         renderer = std::make_shared<Renderer>(platform);
         renderer->Initialize();
 
-        modelLoader = std::make_shared<ModelLoader>();
-        modelLoader->Initialize(renderer);
-        Model model = modelLoader->LoadModel(gv::MODEL_PATH, gv::TEXTURE_PATH);
+        resourceManager = std::make_unique<ResourceManager>(renderer->getContext()); 
+        auto pVikingTex = resourceManager->LoadResource<Texture>("viking_tex");  
+        std::cout << "making cow model\n";
+        auto pVikingRoom = resourceManager->LoadResource<Mesh>("viking_room", "cow.obj");  
+        std::cout << "done making cow model\n";
 
-        renderer->RenderModel(&model);
-        renderer->Build();
+        renderer->RenderModel(pVikingRoom.Get());
+        renderer->Build(pVikingTex->getImageView(), pVikingTex->getSampler());
     }
 
     void run(){

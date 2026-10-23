@@ -5,6 +5,10 @@
 
 #include <vector>
 
+#include <vulkan_shared.h>
+
+namespace gv = GVIS;
+
 // TODO: cleanup device params
 struct DeviceParams{
     std::vector<const char*> requiredExts;             
@@ -35,6 +39,11 @@ class VulkanDevice{
     const vk::raii::Device& getDevice() const {return logicalDevice;}
     const vk::raii::PhysicalDevice& getPhysicalDevice() const {
         return physicalDevice;}
+    const gv::DeviceContext getContext() const { return gv::DeviceContext{
+            .device         = logicalDevice 
+        ,   .physicalDevice = physicalDevice
+        ,   .queue          = graphicsQueue
+    }; }
 
   private:
     //vulkan params
